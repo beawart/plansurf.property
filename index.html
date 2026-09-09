@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Investment Property Manager — ATO Tax Planner</title>
+<style>
+:root{--bg:#f6f5f2;--surface:#fff;--surface-alt:#f0efeb;--border:#e0ddd5;--text:#1a1a18;--text-sec:#6b6960;--text-dim:#9e9b90;--accent:#1d4ed8;--accent-light:#eff6ff;--green:#16a34a;--green-bg:#f0fdf4;--red:#dc2626;--red-bg:#fef2f2;--amber:#d97706;--amber-bg:#fffbeb;--teal:#0d9488;--teal-bg:#f0fdfa;--purple:#7c3aed;--purple-bg:#f5f3ff;--radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,.06);--shadow-lg:0 8px 24px rgba(0,0,0,.08);}
+[data-theme="dark"]{--bg:#0f0f0e;--surface:#1a1a18;--surface-alt:#232220;--border:#333330;--text:#ececea;--text-sec:#a0a098;--text-dim:#686860;--accent:#60a5fa;--accent-light:#0c1f3f;--green-bg:#052e16;--red-bg:#2a0f0f;--amber-bg:#2a210a;--teal-bg:#042f2e;--purple-bg:#1a0a3a;--shadow:0 1px 3px rgba(0,0,0,.3);--shadow-lg:0 8px 24px rgba(0,0,0,.4);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;font-size:14px;}
+button{cursor:pointer;font-family:inherit;}input,textarea,select{font-family:inherit;font-size:inherit;}
+::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* Header */
+.hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.hdr h1{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.hdr .fy{font-size:12px;color:var(--accent);background:var(--accent-light);padding:3px 10px;border-radius:12px;font-weight:600;}
+.hdr-r{display:flex;gap:6px;align-items:center;}.sync-status{font-size:11px;color:var(--text-sec);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ibtn{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-sec);font-size:15px;transition:.15s;}
+.ibtn:hover{background:var(--surface-alt);}.ibtn.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:260px 1fr;max-width:1400px;margin:0 auto;min-height:calc(100vh - 53px);}
+@media(max-width:900px){.layout{grid-template-columns:1fr;}.sidebar{border-right:none!important;border-bottom:1px solid var(--border);}}
+
+.sidebar{border-right:1px solid var(--border);background:var(--surface);padding:16px;overflow-y:auto;}
+
+/* Property list */
+.prop-list{margin-bottom:16px;}
+.prop-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);cursor:pointer;transition:.12s;border:2px solid transparent;margin-bottom:4px;}
+.prop-item:hover{background:var(--surface-alt);}
+.prop-item.active{border-color:var(--accent);background:var(--accent-light);}
+.prop-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:var(--surface-alt);}
+.prop-info{flex:1;min-width:0;overflow:hidden;}
+.prop-addr{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.prop-sub{font-size:10px;color:var(--text-dim);}
+.prop-yield{font-size:10px;font-weight:700;color:var(--green);}
+
+/* FY selector */
+.fy-nav{display:flex;align-items:center;gap:8px;margin-bottom:16px;justify-content:center;}
+.fy-nav span{font-size:13px;font-weight:600;min-width:80px;text-align:center;}
+.fy-btn{background:none;border:1px solid var(--border);color:var(--text-sec);padding:4px 10px;border-radius:6px;font-size:13px;}
+.fy-btn:hover{background:var(--surface-alt);}
+
+/* Quick stats sidebar */
+.side-stats{padding:12px;background:var(--surface-alt);border-radius:var(--radius-lg);border:1px solid var(--border);margin-bottom:12px;}
+.side-stats h4{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);margin-bottom:8px;}
+.ss-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;color:var(--text-sec);}
+.ss-row .v{font-weight:600;color:var(--text);}
+.ss-row .v.neg{color:var(--red);}
+.ss-row .v.pos{color:var(--green);}
+
+.btn{padding:9px 16px;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;transition:.15s;}
+.btn-p{background:var(--accent);color:#fff;}.btn-p:hover{opacity:.9;}
+.btn-g{background:none;color:var(--text-sec);border:1px solid var(--border);}.btn-g:hover{background:var(--surface-alt);}
+.btn-full{width:100%;}
+
+/* Main panel */
+.main{padding:20px 28px;overflow-y:auto;}
+@media(max-width:900px){.main{padding:14px;}}
+
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto;}
+.tab{padding:10px 18px;font-size:13px;font-weight:600;color:var(--text-sec);background:none;border:none;border-bottom:2px solid transparent;transition:.12s;white-space:nowrap;}
+.tab:hover{color:var(--text);}.tab.on{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* Stats cards */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:24px;}
+.scard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;position:relative;overflow:hidden;}
+.scard .label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);}
+.scard .val{font-size:22px;font-weight:700;margin-top:4px;}
+.scard .sub{font-size:10px;color:var(--text-sec);margin-top:2px;}
+.scard .icon{position:absolute;top:12px;right:12px;font-size:22px;opacity:.2;}
+
+/* Section card */
+.section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:16px;}
+.section h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+
+/* Table */
+.tbl{width:100%;border-collapse:separate;border-spacing:0;}
+.tbl th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);}
+.tbl td{padding:9px 10px;border-bottom:1px solid var(--border);font-size:13px;}
+.tbl tr{background:var(--surface);transition:.12s;}.tbl tr:hover{background:var(--surface-alt);}
+.tbl .amt{text-align:right;font-weight:600;font-variant-numeric:tabular-nums;}
+.tbl .amt.neg{color:var(--red);}.tbl .amt.pos{color:var(--green);}
+.table-tools{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.table-tools input{flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-alt);color:var(--text);font-size:12px;outline:none;}
+.table-tools input:focus{border-color:var(--accent);}
+.table-tools .count{font-size:11px;color:var(--text-dim);margin-left:auto;}
+.sort-btn{background:none;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;color:var(--text-sec);font-size:11px;font-weight:600;}
+.sort-btn:hover{background:var(--surface-alt);color:var(--text);}
+.edit-cell{width:100%;padding:6px 8px;border:1px solid var(--accent);border-radius:6px;background:var(--surface-alt);color:var(--text);font-size:12px;outline:none;}
+.edit-cell:focus{box-shadow:0 0 0 2px var(--accent-light);}
+.row-edit-actions{display:flex;gap:4px;white-space:nowrap;}
+.row-edit-actions .abtn.save{color:var(--green);}.row-edit-actions .abtn.cancel{color:var(--text-sec);}
+.tbl-acts{display:flex;gap:2px;opacity:0;transition:.15s;}
+tr:hover .tbl-acts{opacity:1;}
+.abtn{background:none;border:none;color:var(--text-dim);font-size:13px;padding:3px 5px;border-radius:4px;}
+.abtn:hover{background:var(--surface-alt);color:var(--text);}.abtn.del:hover{color:var(--red);}
+
+/* Category badge */
+.cat-badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
+
+/* Add form row */
+.add-row{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;}
+.add-row input,.add-row select{padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-alt);color:var(--text);font-size:12px;outline:none;}
+.add-row input:focus,.add-row select:focus{border-color:var(--accent);}
+.add-row input[type=text],.add-row input[type=date]{flex:1;min-width:120px;}
+.add-row input[type=number]{width:110px;}
+
+/* ATO Info boxes */
+.ato-info{background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--accent);display:flex;align-items:flex-start;gap:8px;}
+.ato-info .ato-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+
+/* Depreciation table */
+.dep-card{background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+.dep-card .dep-name{font-size:13px;font-weight:600;}
+.dep-card .dep-meta{font-size:11px;color:var(--text-sec);}
+.dep-card .dep-val{font-size:14px;font-weight:700;color:var(--green);}
+.dep-card .dep-acts{display:flex;gap:2px;opacity:0;transition:.15s;}
+.dep-card:hover .dep-acts{opacity:1;}
+
+/* Tax summary */
+.tax-summary{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:800px){.tax-summary{grid-template-columns:1fr;}}
+.tax-block{background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;}
+.tax-block h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);margin-bottom:10px;}
+.tx-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:var(--text-sec);border-bottom:1px solid var(--border);}
+.tx-row:last-child{border:none;}
+.tx-row.total{font-weight:700;color:var(--text);font-size:14px;border-top:2px solid var(--border);padding-top:8px;margin-top:4px;}
+.tx-row .tv{font-weight:600;font-variant-numeric:tabular-nums;}
+.tx-row .tv.neg{color:var(--red);}.tx-row .tv.pos{color:var(--green);}
+
+/* CGT section */
+.cgt-calc{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:700px){.cgt-calc{grid-template-columns:1fr;}}
+.cgt-input{display:flex;flex-direction:column;gap:4px;}
+.cgt-input label{font-size:11px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.3px;}
+.cgt-input input{padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-alt);color:var(--text);outline:none;}
+.cgt-input input:focus{border-color:var(--accent);}
+.cgt-result{background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-top:12px;}
+
+/* Modal */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:200;animation:fi .15s;}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:22px;width:520px;max-width:92vw;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:su .2s;}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:16px;}.sync-note{font-size:12px;color:var(--text-sec);background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;}
+.fg{margin-bottom:12px;}
+.fg label{display:block;font-size:11px;font-weight:600;color:var(--text-sec);margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px;}
+.fg input,.fg textarea,.fg select{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-alt);color:var(--text);font-size:13px;outline:none;}
+.fg input:focus,.fg textarea:focus,.fg select:focus{border-color:var(--accent);}
+.fg textarea{resize:vertical;min-height:50px;}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fg-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.macts{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
+.fg .hint{font-size:10px;color:var(--text-dim);margin-top:2px;font-style:italic;}
+
+.io{display:flex;gap:6px;margin-top:16px;}
+.io button{padding:7px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text-sec);cursor:pointer;}
+.io button:hover{background:var(--surface-alt);}
+
+.empty{text-align:center;padding:50px;color:var(--text-dim);font-size:13px;}.empty .ei{font-size:44px;margin-bottom:10px;}
+
+@keyframes fi{from{opacity:0}to{opacity:1}}
+@keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel">
+const {useState,useEffect,useMemo,useCallback,useRef}=React;
+const S='inv-property-v1';
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d;}catch{return d;}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const GITHUB_CONFIG='inv-property-github-v1';
+const DEFAULT_SYNC_CONFIG={owner:'beawart',repo:'propertymanager-data',path:'propertymanagerdata.json',branch:'main'};
+const getSyncConfig=()=>{const saved=load(GITHUB_CONFIG,{});return{owner:saved.owner||DEFAULT_SYNC_CONFIG.owner,repo:saved.repo||DEFAULT_SYNC_CONFIG.repo,path:saved.path||DEFAULT_SYNC_CONFIG.path,branch:saved.branch||DEFAULT_SYNC_CONFIG.branch};};
+const b64encode=s=>{const bytes=new TextEncoder().encode(s);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin);};
+const b64decode=s=>{const bin=atob(s.replace(/\n/g,'')),bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes);};
+const githubError=x=>{if(x.includes('401'))return'Token is invalid or expired.';if(x.includes('403'))return'Token lacks repository access.';if(x.includes('404'))return'Repository or data file was not found.';if(x.includes('409'))return'The file changed elsewhere. Pull the latest copy first.';return x.slice(0,180);};
+const uid=()=>Math.random().toString(36).substr(2,9)+Date.now().toString(36);
+const fmt=n=>{const abs=Math.abs(n);const s=abs.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});return(n<0?'-':'')+' $'+s;};
+const fmtShort=n=>'$'+Math.abs(n).toLocaleString('en-AU',{minimumFractionDigits:0,maximumFractionDigits:0});
+
+// Australian Financial Year: July 1 - June 30
+const getFY=(date)=>{
+  const d=new Date(date);
+  const m=d.getMonth(); // 0-indexed
+  const y=d.getFullYear();
+  // If month >= July (6), FY = y/(y+1), else FY = (y-1)/y
+  return m>=6 ? y : y-1;
+};
+const fyLabel=(fy)=>`FY ${fy}/${(fy+1).toString().slice(-2)}`;
+const fyRange=(fy)=>({start:`${fy}-07-01`,end:`${fy+1}-06-30`});
+const currentFY=()=>getFY(new Date());
+
+// ATO expense categories
+const EXPENSE_CATS=[
+  {id:'interest',label:'Loan Interest',icon:'🏦',color:'#dc2626',deductible:true,ato:'Interest on loan',tip:'Interest charged on money borrowed to purchase the property. Claim the portion for the investment property only.'},
+  {id:'council-rates',label:'Council Rates',icon:'🏛️',color:'#d97706',deductible:true,ato:'Council rates'},
+  {id:'water-rates',label:'Water Rates',icon:'💧',color:'#2563eb',deductible:true,ato:'Water charges'},
+  {id:'insurance',label:'Insurance',icon:'🛡️',color:'#7c3aed',deductible:true,ato:'Building & landlord insurance'},
+  {id:'property-mgmt',label:'Property Management',icon:'🏢',color:'#0d9488',deductible:true,ato:'Agent fees & commission'},
+  {id:'repairs',label:'Repairs & Maintenance',icon:'🔧',color:'#ea580c',deductible:true,ato:'Repairs and maintenance',tip:'Must restore (not improve). Initial repairs on purchase are capital, not deductible.'},
+  {id:'body-corp',label:'Body Corporate',icon:'🏘️',color:'#6366f1',deductible:true,ato:'Body corporate fees'},
+  {id:'land-tax',label:'Land Tax',icon:'📋',color:'#be185d',deductible:true,ato:'Land tax'},
+  {id:'pest-control',label:'Pest Control',icon:'🐛',color:'#16a34a',deductible:true,ato:'Pest control'},
+  {id:'gardening',label:'Gardening / Lawn',icon:'🌿',color:'#65a30d',deductible:true,ato:'Gardening and lawn mowing'},
+  {id:'cleaning',label:'Cleaning',icon:'🧹',color:'#0891b2',deductible:true,ato:'Cleaning'},
+  {id:'advertising',label:'Tenant Advertising',icon:'📢',color:'#e11d48',deductible:true,ato:'Advertising for tenants'},
+  {id:'legal',label:'Legal Expenses',icon:'⚖️',color:'#4f46e5',deductible:true,ato:'Legal expenses',tip:'Costs to evict tenant or recover rent are deductible. Costs to purchase/sell property are NOT (capital).'},
+  {id:'stationery',label:'Stationery / Phone',icon:'📞',color:'#64748b',deductible:true,ato:'Stationery, phone, postage'},
+  {id:'tax-return',label:'Tax Agent Fees',icon:'📊',color:'#9333ea',deductible:true,ato:'Tax-related expenses',tip:'Proportion relating to rental income schedule only.'},
+  {id:'borrowing',label:'Borrowing Expenses',icon:'📝',color:'#1d4ed8',deductible:true,ato:'Borrowing expenses',tip:'Loan establishment fees, mortgage stamp duty, title search. Deducted over 5 years (or loan term if shorter). If total ≤ $100, claim in full in first year.'},
+  {id:'depreciation',label:'Depreciation',icon:'📉',color:'#0f766e',deductible:true,ato:'Capital works & plant deductions',tip:'Div 43: Building at 2.5% (post-1987). Div 40: Plant & equipment declining value method.'},
+  {id:'other',label:'Other Deductible',icon:'📦',color:'#64748b',deductible:true,ato:'Other rental expenses'},
+  {id:'non-deductible',label:'Non-Deductible',icon:'🚫',color:'#a1a1aa',deductible:false,ato:'N/A',tip:'Travel to inspect property (not deductible from 1 Jul 2017). Purchase/sale costs. Initial repairs.'},
+];
+const CAT_MAP={};EXPENSE_CATS.forEach(c=>CAT_MAP[c.id]=c);
+
+// Income categories
+const INCOME_CATS=[
+  {id:'rent',label:'Rental Income',icon:'💰'},
+  {id:'bond-retained',label:'Bond Retained',icon:'🔒'},
+  {id:'insurance-payout',label:'Insurance Payout',icon:'🛡️'},
+  {id:'other-income',label:'Other Income',icon:'💵'},
+];
+const INC_MAP={};INCOME_CATS.forEach(c=>INC_MAP[c.id]=c);
+
+// Capital improvement categories
+const CAPITAL_CATS=[
+  {id:'renovation',label:'Renovation',icon:'🏗️'},
+  {id:'extension',label:'Extension / Addition',icon:'🏠'},
+  {id:'new-asset',label:'New Asset (Div 40)',icon:'📦',tip:'Plant & equipment: carpet, blinds, hot water, aircon, appliances'},
+  {id:'structural',label:'Structural (Div 43)',icon:'🧱',tip:'Capital works: building, carport, deck, retaining wall. 2.5% over 40 years.'},
+  {id:'other-capital',label:'Other Capital',icon:'📋'},
+];
+
+// Div 40 effective life examples
+const DIV40_ASSETS=[
+  {name:'Carpet',life:10},{name:'Blinds / Curtains',life:10},{name:'Hot Water System',life:12},
+  {name:'Air Conditioner (split)',life:10},{name:'Dishwasher',life:10},{name:'Oven / Cooktop',life:12},
+  {name:'Smoke Alarm',life:6},{name:'Garage Door Motor',life:10},{name:'Light Fittings',life:5},
+  {name:'Exhaust Fan',life:10},{name:'Letterbox',life:20},{name:'Clothesline',life:10},
+  {name:'Garden Shed',life:15},{name:'Fencing',life:20},{name:'Custom...',life:10},
+];
+
+function EditableDataTable({rows,columns,searchText,renderView,renderEdit,onUpdate,onDelete,footer}){
+  const [query,setQuery]=useState('');
+  const [sort,setSort]=useState({key:columns[0].key,direction:'desc'});
+  const [editingId,setEditingId]=useState(null);
+  const [draft,setDraft]=useState(null);
+
+  const visibleRows=useMemo(()=>{
+    const needle=query.trim().toLowerCase();
+    const filtered=rows.filter(row=>!needle||searchText(row).toLowerCase().includes(needle));
+    return [...filtered].sort((a,b)=>{
+      const av=a[sort.key]??'',bv=b[sort.key]??'';
+      const an=typeof av==='number'?av:parseFloat(av);
+      const bn=typeof bv==='number'?bv:parseFloat(bv);
+      const comparison=!Number.isNaN(an)&&!Number.isNaN(bn)?an-bn:String(av).localeCompare(String(bv));
+      return sort.direction==='asc'?comparison:-comparison;
+    });
+  },[rows,query,searchText,sort]);
+
+  const startEdit=row=>{setEditingId(row.id);setDraft({...row});};
+  const cancelEdit=()=>{setEditingId(null);setDraft(null);};
+  const saveEdit=()=>{if(draft) onUpdate(draft);cancelEdit();};
+  const toggleSort=key=>setSort(current=>current.key===key
+    ?{key,direction:current.direction==='asc'?'desc':'asc'}
+    :{key,direction:'asc'});
+
+  return <>
+    <div className="table-tools">
+      <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Filter rows..." aria-label="Filter table rows" />
+      {columns.map(column=><button key={column.key} className="sort-btn" onClick={()=>toggleSort(column.key)}>
+        Sort {column.label} {sort.key===column.key?(sort.direction==='asc'?'↑':'↓'):''}
+      </button>)}
+      <span className="count">{visibleRows.length} of {rows.length} rows</span>
+    </div>
+    <table className="tbl">
+      <thead><tr>{columns.map(column=><th key={column.key}>{column.label}</th>)}<th></th></tr></thead>
+      <tbody>
+        {visibleRows.map(row=>editingId===row.id
+          ? <React.Fragment key={row.id}>{renderEdit(draft,setDraft,saveEdit,cancelEdit)}</React.Fragment>
+          : <React.Fragment key={row.id}>{renderView(row,startEdit,onDelete)}</React.Fragment>)}
+      </tbody>
+      {footer}
+    </table>
+  </>;
+}
+
+const editValue=(draft,setDraft,key,value)=>setDraft({...draft,[key]:value});
+const editInput=(draft,setDraft,key,type='text')=><input className="edit-cell" type={type} value={draft[key]??''} onChange={e=>editValue(draft,setDraft,key,e.target.value)} />;
+
+function IncomeViewRow(row,onEdit,onDelete){
+  const category=INC_MAP[row.category];
+  return <tr>
+    <td style={{fontSize:12,color:'var(--text-dim)',whiteSpace:'nowrap'}}>{row.date}</td>
+    <td>{row.description}</td>
+    <td><span className="cat-badge" style={{background:'var(--green-bg)',color:'var(--green)'}}>{category?.icon} {category?.label||row.category}</span></td>
+    <td className="amt pos">+ {fmt(row.amount)}</td>
+    <td><div className="tbl-acts"><button className="abtn" onClick={()=>onEdit(row)}>Edit</button><button className="abtn del" onClick={()=>onDelete(row.id)}>✕</button></div></td>
+  </tr>;
+}
+function IncomeEditRow(draft,setDraft,save,cancel){
+  return <tr>
+    <td>{editInput(draft,setDraft,'date','date')}</td><td>{editInput(draft,setDraft,'description')}</td>
+    <td><select className="edit-cell" value={draft.category} onChange={e=>editValue(draft,setDraft,'category',e.target.value)}>{INCOME_CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</select></td>
+    <td>{editInput(draft,setDraft,'amount','number')}</td><td><div className="row-edit-actions"><button className="abtn save" onClick={()=>save({...draft,amount:parseFloat(draft.amount)||0})}>Save</button><button className="abtn cancel" onClick={cancel}>Cancel</button></div></td>
+  </tr>;
+}
+
+function ExpenseViewRow(row,onEdit,onDelete){
+  const category=CAT_MAP[row.category];
+  return <tr>
+    <td style={{fontSize:12,color:'var(--text-dim)',whiteSpace:'nowrap'}}>{row.date}</td><td>{row.description}</td>
+    <td><span className="cat-badge" style={{background:(category?.color||'#666')+'18',color:category?.color||'var(--text-sec)'}}>{category?.icon} {category?.label||row.category}</span></td>
+    <td style={{fontSize:11,color:'var(--text-dim)'}}>{category?.ato||'—'}</td><td className="amt neg">- {fmt(row.amount)}</td>
+    <td><div className="tbl-acts"><button className="abtn" onClick={()=>onEdit(row)}>Edit</button><button className="abtn del" onClick={()=>onDelete(row.id)}>✕</button></div></td>
+  </tr>;
+}
+function ExpenseEditRow(draft,setDraft,save,cancel){
+  return <tr>
+    <td>{editInput(draft,setDraft,'date','date')}</td><td>{editInput(draft,setDraft,'description')}</td>
+    <td><select className="edit-cell" value={draft.category} onChange={e=>editValue(draft,setDraft,'category',e.target.value)}>{EXPENSE_CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</select></td>
+    <td>{CAT_MAP[draft.category]?.ato||'—'}</td><td>{editInput(draft,setDraft,'amount','number')}</td><td><div className="row-edit-actions"><button className="abtn save" onClick={()=>save({...draft,amount:parseFloat(draft.amount)||0})}>Save</button><button className="abtn cancel" onClick={cancel}>Cancel</button></div></td>
+  </tr>;
+}
+
+function CapitalViewRow(row,onEdit,onDelete){
+  const category=CAPITAL_CATS.find(item=>item.id===row.category);
+  return <tr>
+    <td style={{fontSize:12,color:'var(--text-dim)',whiteSpace:'nowrap'}}>{row.date}</td><td>{row.description}</td>
+    <td><span className="cat-badge" style={{background:'var(--purple-bg)',color:'var(--purple)'}}>{category?.icon||'📋'} {category?.label||row.category}</span></td>
+    <td style={{fontSize:11,color:'var(--text-dim)'}}>{row.depType==='div43'?'Div 43 (2.5% / 40yr)':row.depType==='div40'?`Div 40 (${row.effectiveLife||10}yr)`:'None'}</td>
+    <td className="amt">{fmt(row.amount)}</td><td><div className="tbl-acts"><button className="abtn" onClick={()=>onEdit(row)}>Edit</button><button className="abtn del" onClick={()=>onDelete(row.id)}>✕</button></div></td>
+  </tr>;
+}
+function CapitalEditRow(draft,setDraft,save,cancel){
+  return <tr>
+    <td>{editInput(draft,setDraft,'date','date')}</td><td>{editInput(draft,setDraft,'description')}</td>
+    <td><select className="edit-cell" value={draft.category} onChange={e=>editValue(draft,setDraft,'category',e.target.value)}>{CAPITAL_CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</select></td>
+    <td><select className="edit-cell" value={draft.depType||'none'} onChange={e=>editValue(draft,setDraft,'depType',e.target.value)}><option value="none">None</option><option value="div43">Div 43</option><option value="div40">Div 40</option></select></td>
+    <td>{editInput(draft,setDraft,'amount','number')}</td><td><div className="row-edit-actions"><button className="abtn save" onClick={()=>save({...draft,amount:parseFloat(draft.amount)||0,effectiveLife:parseInt(draft.effectiveLife)||10})}>Save</button><button className="abtn cancel" onClick={cancel}>Cancel</button></div></td>
+  </tr>;
+}
+
+function App(){
+  const now=new Date();
+  const [properties,setProperties]=useState(()=>load(S+'-props',[]));
+  const [incomes,setIncomes]=useState(()=>load(S+'-income',{}));
+  const [expenses,setExpenses]=useState(()=>load(S+'-expense',{}));
+  const [capitals,setCapitals]=useState(()=>load(S+'-capital',{}));
+  const [depreciations,setDepreciations]=useState(()=>load(S+'-dep',{}));
+  const [dark,setDark]=useState(()=>localStorage.getItem('ip-dark')==='1');
+  const [selProp,setSelProp]=useState(null);
+  const [fy,setFy]=useState(currentFY());
+  const [tab,setTab]=useState('overview');
+  const [modal,setModal]=useState(null);
+  const [editItem,setEditItem]=useState(null);
+  const [syncConfig,setSyncConfig]=useState(getSyncConfig);
+  const [githubToken,setGithubToken]=useState('');
+  const [syncStatus,setSyncStatus]=useState('Local cache loaded');
+  const [dirty,setDirty]=useState(false);
+  const [syncing,setSyncing]=useState(false);
+  const syncReady=useRef(false);
+  const suppressDirty=useRef(false);
+
+  useEffect(()=>{
+    save(S+'-props',properties);save(S+'-income',incomes);save(S+'-expense',expenses);save(S+'-capital',capitals);save(S+'-dep',depreciations);
+    if(syncReady.current){
+      if(suppressDirty.current)suppressDirty.current=false;
+      else{setDirty(true);setSyncStatus('Unsaved local changes');}
+    }
+  },[properties,incomes,expenses,capitals,depreciations]);
+  useEffect(()=>{syncReady.current=true;},[]);
+  useEffect(()=>{document.documentElement.setAttribute('data-theme',dark?'dark':'light');localStorage.setItem('ip-dark',dark?'1':'0');},[dark]);
+
+  // Auto-select first property
+  useEffect(()=>{if(properties.length>0&&!selProp) setSelProp(properties[0].id);},[properties]);
+
+  const prop=properties.find(p=>p.id===selProp);
+  const pk=selProp||'_'; // property key
+  const fk=`${pk}_${fy}`; // combined key
+
+  // Get data for current property + FY
+  const propIncomes=(incomes[fk]||[]);
+  const propExpenses=(expenses[fk]||[]);
+  const propCapitals=(capitals[pk]||[]);
+  const propDeps=(depreciations[pk]||[]);
+
+  // CRUD helpers
+  const addIncome=i=>{setIncomes(p=>({...p,[fk]:[...(p[fk]||[]),{...i,id:uid()}]}));};
+  const updateIncome=i=>{setIncomes(p=>({...p,[fk]:(p[fk]||[]).map(x=>x.id===i.id?i:x)}));};
+  const deleteIncome=id=>{setIncomes(p=>({...p,[fk]:(p[fk]||[]).filter(x=>x.id!==id)}));};
+  const addExpense=e=>{setExpenses(p=>({...p,[fk]:[...(p[fk]||[]),{...e,id:uid()}]}));};
+  const updateExpense=e=>{setExpenses(p=>({...p,[fk]:(p[fk]||[]).map(x=>x.id===e.id?e:x)}));};
+  const deleteExpense=id=>{setExpenses(p=>({...p,[fk]:(p[fk]||[]).filter(x=>x.id!==id)}));};
+  const addCapital=c=>{setCapitals(p=>({...p,[pk]:[...(p[pk]||[]),{...c,id:uid()}]}));};
+  const updateCapital=c=>{setCapitals(p=>({...p,[pk]:(p[pk]||[]).map(x=>x.id===c.id?c:x)}));};
+  const deleteCapital=id=>{setCapitals(p=>({...p,[pk]:(p[pk]||[]).filter(x=>x.id!==id)}));};
+  const addDep=d=>{setDepreciations(p=>({...p,[pk]:[...(p[pk]||[]),{...d,id:uid()}]}));};
+  const deleteDep=id=>{setDepreciations(p=>({...p,[pk]:(p[pk]||[]).filter(x=>x.id!==id)}));};
+
+  const addProperty=p=>{
+    const newP={...p,id:uid(),createdAt:Date.now()};
+    setProperties(pr=>[...pr,newP]);
+    setSelProp(newP.id);
+  };
+  const updateProperty=(id,u)=>{setProperties(p=>p.map(x=>x.id===id?{...x,...u}:x));};
+  const deleteProperty=id=>{
+    setProperties(p=>p.filter(x=>x.id!==id));
+    if(selProp===id) setSelProp(properties.find(x=>x.id!==id)?.id||null);
+  };
+
+  // ── Calculations ──
+
+  // Total income for this FY
+  const totalIncome=propIncomes.reduce((s,i)=>s+i.amount,0);
+
+  // Expenses by category
+  const expByCat=useMemo(()=>{
+    const m={};
+    propExpenses.forEach(e=>{m[e.category]=(m[e.category]||0)+e.amount;});
+    return m;
+  },[propExpenses]);
+
+  // Total deductible expenses
+  const totalDeductible=propExpenses.filter(e=>{
+    const cat=CAT_MAP[e.category];
+    return cat&&cat.deductible;
+  }).reduce((s,e)=>s+e.amount,0);
+
+  const totalNonDeductible=propExpenses.filter(e=>{
+    const cat=CAT_MAP[e.category];
+    return !cat||!cat.deductible;
+  }).reduce((s,e)=>s+e.amount,0);
+
+  // Borrowing expenses deduction for this FY
+  const borrowingDeduction=useMemo(()=>{
+    if(!prop) return 0;
+    const be=propExpenses.filter(e=>e.category==='borrowing');
+    const totalBE=be.reduce((s,e)=>s+e.amount,0);
+    // If ≤$100, fully deductible in year incurred
+    if(totalBE<=100) return totalBE;
+    // Otherwise spread over 5 years (or loan term if shorter)
+    const loanTermYears=Math.min(parseInt(prop.loanTerm)||30,5);
+    return totalBE/loanTermYears;
+  },[propExpenses,prop]);
+
+  // Depreciation deductions for this FY
+  const depDeductions=useMemo(()=>{
+    let div43=0,div40=0;
+    propDeps.forEach(d=>{
+      const purchaseDate=new Date(d.date);
+      const purchaseFY=getFY(purchaseDate);
+      if(purchaseFY>fy) return; // not yet purchased
+      if(d.type==='div43'){
+        // 2.5% per year for 40 years
+        const yearsHeld=fy-purchaseFY+1;
+        if(yearsHeld<=40) div43+=d.cost*0.025;
+      } else {
+        // Declining value: base value × (days held / 365) × (200% / effective life)
+        const effectiveLife=d.effectiveLife||10;
+        const rate=2/effectiveLife; // 200% declining value
+        let bookValue=d.cost;
+        for(let y=purchaseFY;y<=fy;y++){
+          const yearDep=bookValue*rate;
+          if(y===fy) div40+=yearDep;
+          bookValue-=yearDep;
+          if(bookValue<=0) break;
+        }
+      }
+    });
+    return{div43:Math.round(div43*100)/100,div40:Math.round(div40*100)/100,total:Math.round((div43+div40)*100)/100};
+  },[propDeps,fy]);
+
+  // Net rental income (before depreciation — standard deductibles minus borrowing already counted)
+  const deductibleExBorrowing=totalDeductible-expByCat['borrowing']||0;
+  const netRentalIncome=totalIncome-deductibleExBorrowing-(expByCat['borrowing']?borrowingDeduction:0)-depDeductions.total;
+  const isNegativelyGeared=netRentalIncome<0;
+
+  // Total expenses (for overview)
+  const totalExpenses=propExpenses.reduce((s,e)=>s+e.amount,0);
+
+  // Capital improvements total
+  const totalCapital=propCapitals.reduce((s,c)=>s+c.amount,0);
+
+  // Gross yield
+  const grossYield=prop&&prop.purchasePrice>0?Math.round(totalIncome/prop.purchasePrice*10000)/100:0;
+
+  // ── Sidebar stats (portfolio-wide) ──
+  const portfolioStats=useMemo(()=>{
+    let totalVal=0,totalLoan=0,totalRent=0,totalExp=0;
+    properties.forEach(p=>{
+      totalVal+=(parseFloat(p.currentValue)||parseFloat(p.purchasePrice)||0);
+      totalLoan+=(parseFloat(p.loanBalance)||0);
+      const fk2=`${p.id}_${fy}`;
+      totalRent+=(incomes[fk2]||[]).reduce((s,i)=>s+i.amount,0);
+      totalExp+=(expenses[fk2]||[]).reduce((s,e)=>s+e.amount,0);
+    });
+    return{totalVal,totalLoan,equity:totalVal-totalLoan,totalRent,totalExp,net:totalRent-totalExp};
+  },[properties,incomes,expenses,fy]);
+
+  const syncData={version:1,properties,incomes,expenses,capitals,depreciations,updatedAt:new Date().toISOString()};
+  const githubUrl=()=>`https://api.github.com/repos/${encodeURIComponent(syncConfig.owner)}/${encodeURIComponent(syncConfig.repo)}/contents/${syncConfig.path.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(syncConfig.branch)}`;
+  const githubHeaders=()=>({'Accept':'application/vnd.github+json','Authorization':`Bearer ${githubToken}`,'X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'});
+  const validSync=()=>syncConfig.owner&&syncConfig.repo&&syncConfig.path&&syncConfig.branch&&githubToken;
+  const saveSyncConfig=config=>{setSyncConfig(config);save(GITHUB_CONFIG,config);};
+  const applySyncData=d=>{
+    if(!Array.isArray(d.properties)||typeof d.incomes!=='object'||typeof d.expenses!=='object'||typeof d.capitals!=='object'||typeof d.depreciations!=='object')throw new Error('The JSON file has an unexpected format.');
+    suppressDirty.current=true;
+    setProperties(d.properties);setIncomes(d.incomes);setExpenses(d.expenses);setCapitals(d.capitals);setDepreciations(d.depreciations);
+  };
+  const pullGitHub=async()=>{
+    if(!validSync()){setSyncStatus('Complete GitHub settings first');return;}
+    if(dirty&&!window.confirm('Pulling will replace unsaved local changes. Continue?'))return;
+    setSyncing(true);setSyncStatus('Pulling from GitHub...');
+    try{
+      const response=await fetch(githubUrl(),{headers:githubHeaders()});
+      if(response.status===404)throw new Error('404');
+      if(!response.ok)throw new Error(`${response.status} ${await response.text()}`);
+      const remote=JSON.parse(b64decode((await response.json()).content));
+      applySyncData(remote);setDirty(false);setSyncStatus('Synced from GitHub');
+    }catch(error){setSyncStatus('Pull failed: '+githubError(error.message));}
+    finally{setSyncing(false);}
+  };
+  const pushGitHub=async()=>{
+    if(!validSync()){setSyncStatus('Complete GitHub settings first');return;}
+    setSyncing(true);setSyncStatus('Saving to GitHub...');
+    try{
+      const url=githubUrl();let sha=null;const existing=await fetch(url,{headers:githubHeaders()});
+      if(existing.ok)sha=(await existing.json()).sha;else if(existing.status!==404)throw new Error(`${existing.status} ${await existing.text()}`);
+      const body={message:'Update investment property data',content:b64encode(JSON.stringify(syncData,null,2)),branch:syncConfig.branch};
+      if(sha)body.sha=sha;
+      const response=await fetch(url.replace(/\?ref=.*$/,''),{method:'PUT',headers:githubHeaders(),body:JSON.stringify(body)});
+      if(!response.ok)throw new Error(`${response.status} ${await response.text()}`);
+      setDirty(false);setSyncStatus('Backed up to private GitHub repo');
+    }catch(error){setSyncStatus('Backup failed: '+githubError(error.message));}
+    finally{setSyncing(false);}
+  };
+
+  // Export / Import
+  const exportAll=()=>{
+    const data={properties,incomes,expenses,capitals,depreciations};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='investment-property-backup.json';a.click();
+    URL.revokeObjectURL(url);
+  };
+  const importAll=()=>{
+    const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+    inp.onchange=e=>{
+      const f=e.target.files[0];if(!f)return;
+      const r=new FileReader();
+      r.onload=ev=>{
+        try{
+          const d=JSON.parse(ev.target.result);
+          if(d.properties) setProperties(d.properties);
+          if(d.incomes) setIncomes(d.incomes);
+          if(d.expenses) setExpenses(d.expenses);
+          if(d.capitals) setCapitals(d.capitals);
+          if(d.depreciations) setDepreciations(d.depreciations);
+        }catch{alert('Invalid file');}
+      };
+      r.readAsText(f);
+    };
+    inp.click();
+  };
+
+  return(
+    <div>
+      <div className="hdr">
+        <h1>🏘️ Investment Property Manager <span className="fy">{fyLabel(fy)}</span></h1>
+        <div className="hdr-r">
+          <span className="sync-status">{syncStatus}</span>
+          <button className="ibtn" title="GitHub backup settings" onClick={()=>setModal('sync')}>☁</button>
+          <button className={`ibtn ${dark?'on':''}`} onClick={()=>setDark(!dark)}>{dark?'☀':'☾'}</button>
+        </div>
+      </div>
+      <div className="layout">
+        {/* ── Sidebar ── */}
+        <div className="sidebar">
+          {/* FY navigator */}
+          <div className="fy-nav">
+            <button className="fy-btn" onClick={()=>setFy(fy-1)}>‹</button>
+            <span>{fyLabel(fy)}</span>
+            <button className="fy-btn" onClick={()=>setFy(fy+1)}>›</button>
+          </div>
+
+          {/* Properties list */}
+          <div className="prop-list">
+            {properties.map(p=>(
+              <div key={p.id} className={`prop-item ${selProp===p.id?'active':''}`}
+                onClick={()=>{setSelProp(p.id);setTab('overview');}}>
+                <div className="prop-icon">🏠</div>
+                <div className="prop-info">
+                  <div className="prop-addr">{p.address}</div>
+                  <div className="prop-sub">{p.suburb}, {p.state} {p.postcode}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button className="btn btn-p btn-full" style={{fontSize:12}} onClick={()=>{setEditItem(null);setModal('property');}}>+ Add Property</button>
+
+          {/* Portfolio summary */}
+          <div className="side-stats" style={{marginTop:16}}>
+            <h4>Portfolio Summary ({fyLabel(fy)})</h4>
+            <div className="ss-row"><span>Properties</span><span className="v">{properties.length}</span></div>
+            <div className="ss-row"><span>Total Value</span><span className="v">{fmtShort(portfolioStats.totalVal)}</span></div>
+            <div className="ss-row"><span>Total Loans</span><span className="v neg">{fmtShort(portfolioStats.totalLoan)}</span></div>
+            <div className="ss-row"><span>Equity</span><span className={`v ${portfolioStats.equity>=0?'pos':'neg'}`}>{fmtShort(portfolioStats.equity)}</span></div>
+            <div className="ss-row" style={{borderTop:'1px solid var(--border)',paddingTop:6,marginTop:4}}><span>Total Rent</span><span className="v pos">{fmtShort(portfolioStats.totalRent)}</span></div>
+            <div className="ss-row"><span>Total Expenses</span><span className="v neg">{fmtShort(portfolioStats.totalExp)}</span></div>
+            <div className="ss-row"><span>Net</span><span className={`v ${portfolioStats.net>=0?'pos':'neg'}`}>{fmtShort(portfolioStats.net)}</span></div>
+          </div>
+
+          <div className="io">
+            <button onClick={exportAll}>↓ Export</button>
+            <button onClick={importAll}>↑ Import</button>
+            <button onClick={pushGitHub} disabled={syncing}>☁ Backup</button>
+          </div>
+        </div>
+
+        {/* ── Main Panel ── */}
+        <div className="main">
+          {!prop?(
+            <div className="empty"><div className="ei">🏘️</div><p>Add a property to get started.</p></div>
+          ):(
+            <>
+              {/* Tabs */}
+              <div className="tabs">
+                {['overview','income','expenses','capital','depreciation','tax-summary','cgt','tax-brackets','stamp-duty','land-tax'].map(t=>(
+                  <button key={t} className={`tab ${tab===t?'on':''}`} onClick={()=>setTab(t)}>
+                    {t==='overview'?'📊 Overview':t==='income'?'💰 Income':t==='expenses'?'📤 Expenses':
+                     t==='capital'?'🏗️ Capital Works':t==='depreciation'?'📉 Depreciation':
+                     t==='tax-summary'?'🧾 ATO Tax Summary':t==='cgt'?'💹 CGT':
+                     t==='tax-brackets'?'🧮 Tax Brackets':t==='stamp-duty'?'🏛️ Stamp Duty':'🗺️ Land Tax'}
+                  </button>
+                ))}
+              </div>
+
+              {/* OVERVIEW */}
+              {tab==='overview'&&(
+                <div>
+                  {/* Property details */}
+                  <div className="section">
+                    <h3>
+                      Property Details
+                      <button className="btn btn-g" style={{fontSize:11,padding:'4px 10px'}} onClick={()=>{setEditItem(prop);setModal('property');}}>Edit</button>
+                    </h3>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,fontSize:13}}>
+                      <div><span style={{color:'var(--text-dim)',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.3px',display:'block'}}>Address</span>{prop.address}, {prop.suburb} {prop.state} {prop.postcode}</div>
+                      <div><span style={{color:'var(--text-dim)',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.3px',display:'block'}}>Purchase Price</span>{fmt(prop.purchasePrice||0)}</div>
+                      <div><span style={{color:'var(--text-dim)',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.3px',display:'block'}}>Purchase Date</span>{prop.purchaseDate||'—'}</div>
+                      <div><span style={{color:'var(--text-dim)',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.3px',display:'block'}}>Current Value</span>{fmt(prop.currentValue||prop.purchasePrice||0)}</div>
+                      <div><span style={{color:'var(--text-dim)',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.3px',display:'block'}}>Loan Balance</span>{fmt(prop.loanBalance||0)}</div>
+                      <div><span style={{color:'var(--text-dim)',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.3px',display:'block'}}>Loan Rate</span>{prop.interestRate||'—'}%</div>
+                      <div><span style={{color:'var(--text-dim)',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.3px',display:'block'}}>Property Type</span>{prop.type||'Residential'}</div>
+                      <div><span style={{color:'var(--text-dim)',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.3px',display:'block'}}>Year Built</span>{prop.yearBuilt||'—'}</div>
+                      <div><span style={{color:'var(--text-dim)',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:'.3px',display:'block'}}>Weekly Rent</span>{prop.weeklyRent?fmt(prop.weeklyRent)+'/wk':'—'}</div>
+                    </div>
+                  </div>
+
+                  {/* FY Stats */}
+                  <div className="stats">
+                    <div className="scard"><span className="icon">💰</span><div className="label">Rental Income</div><div className="val" style={{color:'var(--green)'}}>{fmt(totalIncome)}</div></div>
+                    <div className="scard"><span className="icon">📤</span><div className="label">Total Expenses</div><div className="val" style={{color:'var(--red)'}}>{fmt(totalExpenses)}</div></div>
+                    <div className="scard"><span className="icon">📊</span><div className="label">Net Rental</div><div className="val" style={{color:netRentalIncome>=0?'var(--green)':'var(--red)'}}>{fmt(netRentalIncome)}</div><div className="sub">{isNegativelyGeared?'⚠ Negatively geared':'✓ Positively geared'}</div></div>
+                    <div className="scard"><span className="icon">📈</span><div className="label">Gross Yield</div><div className="val" style={{color:'var(--accent)'}}>{grossYield}%</div></div>
+                    <div className="scard"><span className="icon">📉</span><div className="label">Depreciation</div><div className="val" style={{color:'var(--teal)'}}>{fmt(depDeductions.total)}</div><div className="sub">Div 43: {fmt(depDeductions.div43)} · Div 40: {fmt(depDeductions.div40)}</div></div>
+                    <div className="scard"><span className="icon">🏗️</span><div className="label">Capital Works</div><div className="val">{fmt(totalCapital)}</div></div>
+                  </div>
+
+                  {/* Expense breakdown */}
+                  {Object.keys(expByCat).length>0&&(
+                    <div className="section">
+                      <h3>Expense Breakdown</h3>
+                      {EXPENSE_CATS.filter(c=>expByCat[c.id]).map(c=>{
+                        const amt=expByCat[c.id];
+                        const pct=totalExpenses>0?Math.round(amt/totalExpenses*100):0;
+                        return(
+                          <div key={c.id} style={{display:'flex',alignItems:'center',gap:10,padding:'6px 0',borderBottom:'1px solid var(--border)'}}>
+                            <span style={{fontSize:16,width:24,textAlign:'center'}}>{c.icon}</span>
+                            <span style={{flex:1,fontSize:13,fontWeight:500}}>{c.label}</span>
+                            <div style={{width:100,height:6,background:'var(--border)',borderRadius:3,overflow:'hidden'}}>
+                              <div style={{height:'100%',width:`${pct}%`,background:c.color,borderRadius:3}}></div>
+                            </div>
+                            <span style={{fontSize:13,fontWeight:600,minWidth:80,textAlign:'right'}}>{fmt(amt)}</span>
+                            <span style={{fontSize:10,color:'var(--text-dim)',minWidth:30,textAlign:'right'}}>{pct}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* INCOME */}
+              {tab==='income'&&(
+                <div>
+                  <div className="section">
+                    <h3>Rental Income — {fyLabel(fy)}</h3>
+                    <div className="ato-info">
+                      <span className="ato-icon">ℹ️</span>
+                      <div>Report all rental income received during {fyLabel(fy)} (1 Jul {fy} – 30 Jun {fy+1}). Include rent, bond retained, insurance payouts, and any other income from the property.</div>
+                    </div>
+                    {propIncomes.length>0&&<EditableDataTable rows={propIncomes}
+                      columns={[{key:'date',label:'Date'},{key:'description',label:'Description'},{key:'category',label:'Category'},{key:'amount',label:'Amount'}]}
+                      searchText={i=>`${i.date} ${i.description} ${INC_MAP[i.category]?.label||i.category}`}
+                      renderView={IncomeViewRow} renderEdit={IncomeEditRow} onUpdate={updateIncome} onDelete={deleteIncome}
+                      footer={<tfoot><tr style={{fontWeight:700}}><td colSpan={3}>Total Income</td><td className="amt pos">{fmt(totalIncome)}</td><td></td></tr></tfoot>} />}
+                    <IncomeAdd fy={fy} onAdd={addIncome} />
+                  </div>
+                </div>
+              )}
+
+              {/* EXPENSES */}
+              {tab==='expenses'&&(
+                <div>
+                  <div className="section">
+                    <h3>Expenses — {fyLabel(fy)}</h3>
+                    <div className="ato-info">
+                      <span className="ato-icon">ℹ️</span>
+                      <div>
+                        <strong>ATO Deductibility Rules:</strong> Only expenses incurred while the property was rented or available for rent are deductible.
+                        Aportion if the property was used privately for part of the year. From 1 Jul 2017, travel to inspect property is <strong>not deductible</strong>.
+                        Initial repairs at purchase are <strong>capital</strong>, not deductible.
+                      </div>
+                    </div>
+                    {propExpenses.length>0&&<EditableDataTable rows={propExpenses}
+                      columns={[{key:'date',label:'Date'},{key:'description',label:'Description'},{key:'category',label:'Category'},{key:'ato',label:'ATO Item'},{key:'amount',label:'Amount'}]}
+                      searchText={e=>`${e.date} ${e.description} ${CAT_MAP[e.category]?.label||e.category} ${CAT_MAP[e.category]?.ato||''}`}
+                      renderView={ExpenseViewRow} renderEdit={ExpenseEditRow} onUpdate={updateExpense} onDelete={deleteExpense}
+                      footer={<tfoot><tr style={{fontWeight:700}}><td colSpan={4}>Total Deductible</td><td className="amt neg">{fmt(totalDeductible)}</td><td></td></tr>{totalNonDeductible>0&&<tr style={{fontWeight:700,color:'var(--text-dim)'}}><td colSpan={4}>Total Non-Deductible</td><td className="amt">{fmt(totalNonDeductible)}</td><td></td></tr>}</tfoot>} />}
+                    <ExpenseAdd fy={fy} onAdd={addExpense} />
+                  </div>
+                </div>
+              )}
+
+              {/* CAPITAL WORKS */}
+              {tab==='capital'&&(
+                <div>
+                  <div className="section">
+                    <h3>Capital Improvements & Upgrades</h3>
+                    <div className="ato-info">
+                      <span className="ato-icon">ℹ️</span>
+                      <div>
+                        <strong>Capital vs Revenue:</strong> Improvements that enhance the property beyond its original condition are <strong>capital</strong> (not immediately deductible).
+                        They may be depreciable under Div 43 (building works at 2.5%) or Div 40 (plant & equipment).
+                        Repairs that restore to original condition are <strong>revenue</strong> (immediately deductible under Expenses).
+                      </div>
+                    </div>
+                    {propCapitals.length>0&&<EditableDataTable rows={propCapitals}
+                      columns={[{key:'date',label:'Date'},{key:'description',label:'Description'},{key:'category',label:'Category'},{key:'depType',label:'Depreciation'},{key:'amount',label:'Cost'}]}
+                      searchText={c=>`${c.date} ${c.description} ${CAPITAL_CATS.find(item=>item.id===c.category)?.label||c.category} ${c.depType||''}`}
+                      renderView={CapitalViewRow} renderEdit={CapitalEditRow} onUpdate={updateCapital} onDelete={deleteCapital}
+                      footer={<tfoot><tr style={{fontWeight:700}}><td colSpan={4}>Total Capital Works</td><td className="amt">{fmt(totalCapital)}</td><td></td></tr></tfoot>} />}
+                    <CapitalAdd onAdd={c=>{
+                      addCapital(c);
+                      // Auto-add to depreciation if applicable
+                      if(c.depType==='div43'||c.depType==='div40'){
+                        addDep({name:c.description,cost:c.amount,date:c.date,type:c.depType,effectiveLife:c.effectiveLife||10});
+                      }
+                    }} />
+                  </div>
+                </div>
+              )}
+
+              {/* DEPRECIATION */}
+              {tab==='depreciation'&&(
+                <div>
+                  <div className="section">
+                    <h3>Depreciation Schedule</h3>
+                    <div className="ato-info">
+                      <span className="ato-icon">ℹ️</span>
+                      <div>
+                        <strong>Division 43 — Capital Works:</strong> Buildings constructed after 15 Sep 1987 can be depreciated at 2.5% per year (40 years).
+                        <br/><strong>Division 40 — Plant & Equipment:</strong> Items like carpet, blinds, air conditioning depreciate using the <strong>declining value method</strong> at 200% ÷ effective life.
+                        <br/><em>Note: For properties purchased after 9 May 2017 (second-hand), only Div 40 items you install yourself can be claimed. Previously installed items use the previous owner's values.</em>
+                      </div>
+                    </div>
+
+                    {/* Current FY deductions */}
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:16}}>
+                      <div className="scard"><div className="label">Div 43 Deduction</div><div className="val" style={{color:'var(--green)',fontSize:18}}>{fmt(depDeductions.div43)}</div><div className="sub">Capital Works (2.5%/yr)</div></div>
+                      <div className="scard"><div className="label">Div 40 Deduction</div><div className="val" style={{color:'var(--teal)',fontSize:18}}>{fmt(depDeductions.div40)}</div><div className="sub">Plant & Equipment (DV)</div></div>
+                      <div className="scard"><div className="label">Total Depreciation</div><div className="val" style={{color:'var(--accent)',fontSize:18}}>{fmt(depDeductions.total)}</div><div className="sub">Claimable {fyLabel(fy)}</div></div>
+                    </div>
+
+                    {/* Assets */}
+                    {propDeps.map(d=>{
+                      const yearsHeld=fy-getFY(new Date(d.date))+1;
+                      let fyDep=0,bookVal=d.cost;
+                      if(d.type==='div43'){
+                        fyDep=yearsHeld<=40?d.cost*0.025:0;
+                        bookVal=Math.max(0,d.cost-d.cost*0.025*yearsHeld);
+                      } else {
+                        const rate=2/(d.effectiveLife||10);
+                        for(let y=getFY(new Date(d.date));y<=fy;y++){
+                          const dep=bookVal*rate;
+                          if(y===fy) fyDep=dep;
+                          bookVal-=dep;
+                          if(bookVal<=0){bookVal=0;break;}
+                        }
+                      }
+                      return(
+                        <div className="dep-card" key={d.id}>
+                          <div>
+                            <div className="dep-name">{d.name}</div>
+                            <div className="dep-meta">
+                              {d.type==='div43'?'Div 43 · 2.5%/yr · 40yr':`Div 40 · ${d.effectiveLife}yr effective life · DV method`}
+                              &nbsp;· Cost: {fmt(d.cost)} · Acquired: {d.date} · Book value: {fmt(Math.max(0,bookVal))}
+                            </div>
+                          </div>
+                          <div style={{display:'flex',alignItems:'center',gap:8}}>
+                            <div className="dep-val">{fmt(fyDep)}<span style={{fontSize:10,color:'var(--text-dim)',display:'block',fontWeight:400}}>This FY</span></div>
+                            <div className="dep-acts"><button className="abtn del" onClick={()=>deleteDep(d.id)}>✕</button></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    <DepAdd onAdd={addDep} />
+                  </div>
+                </div>
+              )}
+
+              {/* ATO TAX SUMMARY */}
+              {tab==='tax-summary'&&(
+                <div>
+                  <div className="section">
+                    <h3>🧾 ATO Rental Property Tax Summary — {fyLabel(fy)}</h3>
+                    <div className="ato-info">
+                      <span className="ato-icon">ℹ️</span>
+                      <div>This summary aligns with the <strong>ATO Rental Properties Schedule</strong> in your tax return. Transfer these figures to your tax return or provide to your tax agent. All amounts are for: <strong>{prop.address}, {prop.suburb} {prop.state}</strong>.</div>
+                    </div>
+
+                    <div className="tax-summary">
+                      {/* Income */}
+                      <div className="tax-block">
+                        <h4>Income</h4>
+                        {INCOME_CATS.map(c=>{
+                          const amt=propIncomes.filter(i=>i.category===c.id).reduce((s,i)=>s+i.amount,0);
+                          if(amt===0) return null;
+                          return <div className="tx-row" key={c.id}><span>{c.icon} {c.label}</span><span className="tv pos">{fmt(amt)}</span></div>;
+                        })}
+                        <div className="tx-row total"><span>Total Gross Rent</span><span className="tv pos">{fmt(totalIncome)}</span></div>
+                      </div>
+
+                      {/* Deductions */}
+                      <div className="tax-block">
+                        <h4>Deductions</h4>
+                        {EXPENSE_CATS.filter(c=>c.deductible&&c.id!=='borrowing'&&c.id!=='depreciation'&&expByCat[c.id]).map(c=>(
+                          <div className="tx-row" key={c.id}><span>{c.icon} {c.ato}</span><span className="tv neg">{fmt(expByCat[c.id])}</span></div>
+                        ))}
+                        {(expByCat['borrowing']||0)>0&&(
+                          <div className="tx-row"><span>📝 Borrowing expenses (amortised)</span><span className="tv neg">{fmt(borrowingDeduction)}</span></div>
+                        )}
+                        {depDeductions.div43>0&&<div className="tx-row"><span>🧱 Capital works deduction (Div 43)</span><span className="tv neg">{fmt(depDeductions.div43)}</span></div>}
+                        {depDeductions.div40>0&&<div className="tx-row"><span>📦 Plant & equipment (Div 40)</span><span className="tv neg">{fmt(depDeductions.div40)}</span></div>}
+                        <div className="tx-row total"><span>Total Deductions</span><span className="tv neg">{fmt(totalDeductible-((expByCat['borrowing']||0)-borrowingDeduction)+depDeductions.total)}</span></div>
+                      </div>
+                    </div>
+
+                    {/* Net result */}
+                    <div style={{marginTop:16,padding:20,background:isNegativelyGeared?'var(--red-bg)':'var(--green-bg)',border:'1px solid var(--border)',borderRadius:'var(--radius-lg)',textAlign:'center'}}>
+                      <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.6px',color:'var(--text-dim)',marginBottom:4}}>Net Rental Income / (Loss)</div>
+                      <div style={{fontSize:32,fontWeight:800,color:isNegativelyGeared?'var(--red)':'var(--green)'}}>{fmt(netRentalIncome)}</div>
+                      <div style={{fontSize:13,color:'var(--text-sec)',marginTop:4}}>
+                        {isNegativelyGeared
+                          ?`This property is negatively geared. The loss of ${fmt(Math.abs(netRentalIncome))} can offset your other assessable income (e.g. salary), reducing your overall tax payable.`
+                          :`This property is positively geared. Add ${fmt(netRentalIncome)} to your assessable income.`
+                        }
+                      </div>
+                    </div>
+
+                    {totalNonDeductible>0&&(
+                      <div style={{marginTop:12,padding:12,background:'var(--amber-bg)',border:'1px solid var(--border)',borderRadius:'var(--radius)',fontSize:12,color:'var(--amber)'}}>
+                        ⚠ Non-deductible expenses total: {fmt(totalNonDeductible)} — these cannot be claimed as a deduction.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* CGT CALCULATOR */}
+              {tab==='cgt'&&<CGTCalculator prop={prop} capitals={propCapitals} />}
+
+              {/* TAX BRACKETS */}
+              {tab==='tax-brackets'&&<TaxBracketsCalc netRental={netRentalIncome} />}
+
+              {/* STAMP DUTY */}
+              {tab==='stamp-duty'&&<StampDutyCalc prop={prop} />}
+
+              {/* LAND TAX */}
+              {tab==='land-tax'&&<LandTaxCalc prop={prop} />}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Modals */}
+      {modal==='property'&&<PropertyModal prop={editItem} onClose={()=>{setModal(null);setEditItem(null);}}
+        onSave={p=>{if(editItem) updateProperty(editItem.id,p); else addProperty(p); setModal(null);setEditItem(null);}}
+        onDelete={editItem?()=>{deleteProperty(editItem.id);setModal(null);setEditItem(null);}:null} />}
+      {modal==='sync'&&<SyncModal config={syncConfig} token={githubToken} dirty={dirty} syncing={syncing}
+        onClose={()=>setModal(null)} onConfig={config=>saveSyncConfig(config)} onToken={setGithubToken}
+        onPull={pullGitHub} onPush={pushGitHub} status={syncStatus} />}
+    </div>
+  );
+}
+
+// ── CGT Calculator ──
+function CGTCalculator({prop,capitals}){
+  const [salePrice,setSalePrice]=useState('');
+  const [saleDate,setSaleDate]=useState('');
+  const [sellingCosts,setSellingCosts]=useState('');
+  const [marginalRate,setMarginalRate]=useState('37');
+
+  const purchasePrice=parseFloat(prop?.purchasePrice)||0;
+  const purchaseDate=prop?.purchaseDate||'';
+  const totalCapitalImprovements=capitals.reduce((s,c)=>s+c.amount,0);
+
+  const sp=parseFloat(salePrice)||0;
+  const sc=parseFloat(sellingCosts)||0;
+
+  // Cost base = purchase price + buying costs + capital improvements + selling costs
+  const costBase=purchasePrice+totalCapitalImprovements;
+  const netProceeds=sp-sc;
+  const capitalGain=netProceeds-costBase;
+
+  // 50% discount if held > 12 months
+  const held=purchaseDate&&saleDate?((new Date(saleDate)-new Date(purchaseDate))/(1000*60*60*24)):0;
+  const qualifiesDiscount=held>365;
+  const discountedGain=qualifiesDiscount?capitalGain*0.5:capitalGain;
+  const taxOnGain=capitalGain>0?discountedGain*(parseFloat(marginalRate)/100):0;
+
+  return(
+    <div>
+      <div className="section">
+        <h3>💹 Capital Gains Tax Calculator</h3>
+        <div className="ato-info">
+          <span className="ato-icon">ℹ️</span>
+          <div>
+            <strong>CGT Rules:</strong> If you sell the property for more than the cost base, you make a capital gain.
+            Individuals who hold the asset for <strong>more than 12 months</strong> qualify for the <strong>50% CGT discount</strong>.
+            The discounted gain is added to your assessable income and taxed at your marginal rate.
+            <br/><strong>Cost base</strong> = Purchase price + stamp duty + legal fees + capital improvements — depreciation claimed.
+          </div>
+        </div>
+
+        <div className="cgt-calc">
+          <div className="cgt-input"><label>Sale Price ($)</label><input type="number" value={salePrice} onChange={e=>setSalePrice(e.target.value)} placeholder="800000" /></div>
+          <div className="cgt-input"><label>Sale Date</label><input type="date" value={saleDate} onChange={e=>setSaleDate(e.target.value)} /></div>
+          <div className="cgt-input"><label>Selling Costs (agent, legal)</label><input type="number" value={sellingCosts} onChange={e=>setSellingCosts(e.target.value)} placeholder="15000" /></div>
+          <div className="cgt-input"><label>Marginal Tax Rate (%)</label>
+            <select value={marginalRate} onChange={e=>setMarginalRate(e.target.value)}>
+              <option value="0">0% (≤$18,200)</option>
+              <option value="16">16% ($18,201–$45,000)</option>
+              <option value="30">30% ($45,001–$135,000)</option>
+              <option value="37">37% ($135,001–$190,000)</option>
+              <option value="45">45% (over $190,000)</option>
+            </select>
+          </div>
+        </div>
+
+        {sp>0&&(
+          <div className="cgt-result">
+            <div className="tx-row"><span>Purchase Price</span><span className="tv">{fmt(purchasePrice)}</span></div>
+            <div className="tx-row"><span>+ Capital Improvements</span><span className="tv">{fmt(totalCapitalImprovements)}</span></div>
+            <div className="tx-row" style={{fontWeight:600}}><span>Cost Base</span><span className="tv">{fmt(costBase)}</span></div>
+            <div className="tx-row"><span>Sale Proceeds</span><span className="tv">{fmt(sp)}</span></div>
+            <div className="tx-row"><span>- Selling Costs</span><span className="tv neg">{fmt(sc)}</span></div>
+            <div className="tx-row" style={{fontWeight:600}}><span>Net Proceeds</span><span className="tv">{fmt(netProceeds)}</span></div>
+            <div className="tx-row total"><span>Capital Gain / (Loss)</span><span className={`tv ${capitalGain>=0?'pos':'neg'}`}>{fmt(capitalGain)}</span></div>
+            {capitalGain>0&&(
+              <>
+                {qualifiesDiscount&&<div className="tx-row"><span>50% CGT Discount (held {Math.floor(held/365)} years)</span><span className="tv pos">- {fmt(capitalGain*0.5)}</span></div>}
+                <div className="tx-row total"><span>Assessable Capital Gain</span><span className="tv">{fmt(discountedGain)}</span></div>
+                <div className="tx-row"><span>Estimated Tax ({marginalRate}% marginal rate)</span><span className="tv neg">{fmt(taxOnGain)}</span></div>
+                <div className="tx-row"><span>Net After Tax</span><span className="tv pos">{fmt(capitalGain-taxOnGain)}</span></div>
+              </>
+            )}
+            {capitalGain<0&&(
+              <div style={{marginTop:8,fontSize:12,color:'var(--green)'}}>✓ Capital loss of {fmt(Math.abs(capitalGain))} can be carried forward to offset future capital gains (not other income).</div>
+            )}
+            {!qualifiesDiscount&&capitalGain>0&&saleDate&&purchaseDate&&(
+              <div style={{marginTop:8,fontSize:12,color:'var(--amber)'}}>⚠ Property held less than 12 months — 50% CGT discount does not apply.</div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Inline Add Forms ──
+function IncomeAdd({fy,onAdd}){
+  const [desc,setDesc]=useState('');const [amt,setAmt]=useState('');const [cat,setCat]=useState('rent');
+  const [date,setDate]=useState(`${fy+1}-01-01`);
+  return(
+    <div className="add-row">
+      <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{width:130,flex:'none'}} />
+      <input type="text" value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description (e.g. Jan rent)" />
+      <input type="number" value={amt} onChange={e=>setAmt(e.target.value)} placeholder="Amount" min="0" step="0.01" />
+      <select value={cat} onChange={e=>setCat(e.target.value)}>{INCOME_CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</select>
+      <button className="btn btn-p" style={{fontSize:12}} onClick={()=>{if(!desc.trim()||!amt)return;onAdd({date,description:desc.trim(),amount:parseFloat(amt),category:cat});setDesc('');setAmt('');}}>+ Add</button>
+    </div>
+  );
+}
+
+function ExpenseAdd({fy,onAdd}){
+  const [desc,setDesc]=useState('');const [amt,setAmt]=useState('');const [cat,setCat]=useState('interest');
+  const [date,setDate]=useState(`${fy+1}-01-01`);
+  const selCat=CAT_MAP[cat];
+  return(
+    <div>
+      <div className="add-row">
+        <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{width:130,flex:'none'}} />
+        <input type="text" value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description" />
+        <input type="number" value={amt} onChange={e=>setAmt(e.target.value)} placeholder="Amount" min="0" step="0.01" />
+        <select value={cat} onChange={e=>setCat(e.target.value)}>
+          <optgroup label="Deductible">{EXPENSE_CATS.filter(c=>c.deductible).map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</optgroup>
+          <optgroup label="Non-Deductible">{EXPENSE_CATS.filter(c=>!c.deductible).map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</optgroup>
+        </select>
+        <button className="btn btn-p" style={{fontSize:12}} onClick={()=>{if(!desc.trim()||!amt)return;onAdd({date,description:desc.trim(),amount:parseFloat(amt),category:cat});setDesc('');setAmt('');}}>+ Add</button>
+      </div>
+      {selCat?.tip&&<div style={{fontSize:11,color:'var(--text-dim)',marginTop:4,fontStyle:'italic',paddingLeft:4}}>💡 {selCat.tip}</div>}
+    </div>
+  );
+}
+
+function CapitalAdd({onAdd}){
+  const [desc,setDesc]=useState('');const [amt,setAmt]=useState('');const [cat,setCat]=useState('renovation');
+  const [date,setDate]=useState('');const [depType,setDepType]=useState('none');const [life,setLife]=useState('10');
+  return(
+    <div>
+      <div className="add-row">
+        <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{width:130,flex:'none'}} />
+        <input type="text" value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Description (e.g. New kitchen)" />
+        <input type="number" value={amt} onChange={e=>setAmt(e.target.value)} placeholder="Cost" min="0" step="0.01" />
+        <select value={cat} onChange={e=>setCat(e.target.value)}>{CAPITAL_CATS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}</select>
+        <select value={depType} onChange={e=>setDepType(e.target.value)}>
+          <option value="none">No Depreciation</option>
+          <option value="div43">Div 43 (2.5% / 40yr)</option>
+          <option value="div40">Div 40 (Plant - DV)</option>
+        </select>
+        {depType==='div40'&&(
+          <select value={life} onChange={e=>setLife(e.target.value)} style={{width:100}}>
+            {DIV40_ASSETS.map(a=><option key={a.name} value={a.life}>{a.name} ({a.life}yr)</option>)}
+          </select>
+        )}
+        <button className="btn btn-p" style={{fontSize:12}} onClick={()=>{if(!desc.trim()||!amt||!date)return;onAdd({date,description:desc.trim(),amount:parseFloat(amt),category:cat,depType,effectiveLife:parseInt(life)});setDesc('');setAmt('');}}>+ Add</button>
+      </div>
+    </div>
+  );
+}
+
+function DepAdd({onAdd}){
+  const [name,setName]=useState('');const [cost,setCost]=useState('');const [date,setDate]=useState('');
+  const [type,setType]=useState('div40');const [life,setLife]=useState('10');
+  return(
+    <div className="add-row" style={{marginTop:12}}>
+      <input type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="Asset name" />
+      <input type="number" value={cost} onChange={e=>setCost(e.target.value)} placeholder="Cost" min="0" step="0.01" />
+      <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{width:130,flex:'none'}} />
+      <select value={type} onChange={e=>setType(e.target.value)}>
+        <option value="div43">Div 43 (Capital Works)</option>
+        <option value="div40">Div 40 (Plant & Equipment)</option>
+      </select>
+      {type==='div40'&&(
+        <select value={life} onChange={e=>setLife(e.target.value)} style={{width:100}}>
+          {DIV40_ASSETS.map(a=><option key={a.name} value={a.life}>{a.name} ({a.life}yr)</option>)}
+        </select>
+      )}
+      <button className="btn btn-p" style={{fontSize:12}} onClick={()=>{if(!name.trim()||!cost||!date)return;onAdd({name:name.trim(),cost:parseFloat(cost),date,type,effectiveLife:parseInt(life)});setName('');setCost('');}}>+ Add Asset</button>
+    </div>
+  );
+}
+
+// ── Property Modal ──
+function PropertyModal({prop,onClose,onSave,onDelete}){
+  const [address,setAddress]=useState(prop?.address||'');
+  const [suburb,setSuburb]=useState(prop?.suburb||'');
+  const [state,setState]=useState(prop?.state||'NSW');
+  const [postcode,setPostcode]=useState(prop?.postcode||'');
+  const [purchasePrice,setPurchasePrice]=useState(prop?.purchasePrice||'');
+  const [purchaseDate,setPurchaseDate]=useState(prop?.purchaseDate||'');
+  const [currentValue,setCurrentValue]=useState(prop?.currentValue||'');
+  const [loanBalance,setLoanBalance]=useState(prop?.loanBalance||'');
+  const [interestRate,setInterestRate]=useState(prop?.interestRate||'');
+  const [loanTerm,setLoanTerm]=useState(prop?.loanTerm||'30');
+  const [type,setType]=useState(prop?.type||'House');
+  const [yearBuilt,setYearBuilt]=useState(prop?.yearBuilt||'');
+  const [weeklyRent,setWeeklyRent]=useState(prop?.weeklyRent||'');
+
+  return(
+    <div className="modal-ov" onClick={onClose}><div className="modal" onClick={e=>e.stopPropagation()}>
+      <h3>{prop?'Edit Property':'Add Property'}</h3>
+      <div className="fg"><label>Street Address</label><input value={address} onChange={e=>setAddress(e.target.value)} placeholder="e.g. 12 Smith Street" autoFocus /></div>
+      <div className="fg-row3">
+        <div className="fg"><label>Suburb</label><input value={suburb} onChange={e=>setSuburb(e.target.value)} placeholder="e.g. Richmond" /></div>
+        <div className="fg"><label>State</label><select value={state} onChange={e=>setState(e.target.value)}>
+          {['NSW','VIC','QLD','WA','SA','TAS','ACT','NT'].map(s=><option key={s}>{s}</option>)}
+        </select></div>
+        <div className="fg"><label>Postcode</label><input value={postcode} onChange={e=>setPostcode(e.target.value)} placeholder="3121" maxLength={4} /></div>
+      </div>
+      <div className="fg-row">
+        <div className="fg"><label>Purchase Price ($)</label><input type="number" value={purchasePrice} onChange={e=>setPurchasePrice(e.target.value)} placeholder="650000" /></div>
+        <div className="fg"><label>Purchase Date</label><input type="date" value={purchaseDate} onChange={e=>setPurchaseDate(e.target.value)} /></div>
+      </div>
+      <div className="fg-row">
+        <div className="fg"><label>Current Value ($)</label><input type="number" value={currentValue} onChange={e=>setCurrentValue(e.target.value)} placeholder="750000" /><div className="hint">Estimate for equity calculation</div></div>
+        <div className="fg"><label>Weekly Rent ($)</label><input type="number" value={weeklyRent} onChange={e=>setWeeklyRent(e.target.value)} placeholder="550" /></div>
+      </div>
+      <div className="fg-row3">
+        <div className="fg"><label>Loan Balance ($)</label><input type="number" value={loanBalance} onChange={e=>setLoanBalance(e.target.value)} placeholder="520000" /></div>
+        <div className="fg"><label>Interest Rate (%)</label><input type="number" value={interestRate} onChange={e=>setInterestRate(e.target.value)} placeholder="6.2" step="0.01" /></div>
+        <div className="fg"><label>Loan Term (years)</label><input type="number" value={loanTerm} onChange={e=>setLoanTerm(e.target.value)} placeholder="30" /></div>
+      </div>
+      <div className="fg-row">
+        <div className="fg"><label>Property Type</label><select value={type} onChange={e=>setType(e.target.value)}>
+          {['House','Unit / Apartment','Townhouse','Villa','Duplex','Land','Commercial'].map(t=><option key={t}>{t}</option>)}
+        </select></div>
+        <div className="fg"><label>Year Built</label><input type="number" value={yearBuilt} onChange={e=>setYearBuilt(e.target.value)} placeholder="1995" /></div>
+      </div>
+      <div className="macts">
+        {onDelete&&<button className="btn" style={{background:'var(--red-bg)',color:'var(--red)',marginRight:'auto'}} onClick={onDelete}>Delete Property</button>}
+        <button className="btn btn-g" onClick={onClose}>Cancel</button>
+        <button className="btn btn-p" onClick={()=>{
+          if(!address.trim()) return;
+          onSave({address:address.trim(),suburb:suburb.trim(),state,postcode:postcode.trim(),
+            purchasePrice:parseFloat(purchasePrice)||0,purchaseDate,
+            currentValue:parseFloat(currentValue)||0,loanBalance:parseFloat(loanBalance)||0,
+            interestRate:parseFloat(interestRate)||0,loanTerm:parseInt(loanTerm)||30,
+            type,yearBuilt:yearBuilt?parseInt(yearBuilt):'',weeklyRent:parseFloat(weeklyRent)||0});
+        }}>{prop?'Update':'Add Property'}</button>
+      </div>
+    </div></div>
+  );
+}
+
+function SyncModal({config,token,dirty,syncing,onClose,onConfig,onToken,onPull,onPush,status}){
+  const [owner,setOwner]=useState(config.owner||DEFAULT_SYNC_CONFIG.owner);
+  const [repo,setRepo]=useState(config.repo||DEFAULT_SYNC_CONFIG.repo);
+  const [path,setPath]=useState(config.path||DEFAULT_SYNC_CONFIG.path);
+  const [branch,setBranch]=useState(config.branch||DEFAULT_SYNC_CONFIG.branch);
+  const saveSettings=()=>onConfig({owner:owner.trim()||DEFAULT_SYNC_CONFIG.owner,repo:repo.trim()||DEFAULT_SYNC_CONFIG.repo,path:path.trim()||DEFAULT_SYNC_CONFIG.path,branch:branch.trim()||DEFAULT_SYNC_CONFIG.branch});
+  return <div className="modal-ov" onClick={onClose}><div className="modal" onClick={e=>e.stopPropagation()}>
+    <h3>☁ Private GitHub Backup</h3>
+    <div className="sync-note">Your existing local property data stays in this browser. Use <strong>Save local data</strong> to create the first backup in your private repository. The token is used only for this session and is never stored.</div>
+    <div className="fg-row"><div className="fg"><label>GitHub owner / username</label><input value={owner} onChange={e=>setOwner(e.target.value)} placeholder="your-username" /></div><div className="fg"><label>Private repository</label><input value={repo} onChange={e=>setRepo(e.target.value)} placeholder="property-manager-data" /></div></div>
+    <div className="fg-row"><div className="fg"><label>Data file path</label><input value={path} onChange={e=>setPath(e.target.value)} /></div><div className="fg"><label>Branch</label><input value={branch} onChange={e=>setBranch(e.target.value)} /></div></div>
+    <div className="fg"><label>Fine-grained personal access token</label><input type="password" value={token} onChange={e=>onToken(e.target.value)} placeholder="github_pat_..." /><div className="hint">Grant Contents: Read and write for this private repository only.</div></div>
+    <div className="sync-note">Status: {status}{dirty?' · local changes need backup':''}</div>
+    <div className="macts"><button className="btn btn-g" onClick={onClose}>Close</button><button className="btn btn-g" disabled={syncing} onClick={()=>{saveSettings();onPull();}}>↓ Pull latest</button><button className="btn btn-p" disabled={syncing} onClick={()=>{saveSettings();onPush();}}>↑ Save local data</button></div>
+  </div></div>;
+}
+
+// ── Tax Brackets Calculator (2024-25 ATO rates) ──
+function TaxBracketsCalc({netRental}){
+  const [salary,setSalary]=useState('');
+  const [otherIncome,setOtherIncome]=useState('');
+  const [deductions,setDeductions]=useState('');
+  const [privateHealth,setPrivateHealth]=useState('yes');
+  const [helpDebt,setHelpDebt]=useState('no');
+
+  // 2024-25 Australian resident tax brackets
+  const BRACKETS=[
+    {min:0,max:18200,rate:0,base:0},
+    {min:18201,max:45000,rate:0.16,base:0},
+    {min:45001,max:135000,rate:0.30,base:4288},
+    {min:135001,max:190000,rate:0.37,base:31288},
+    {min:190001,max:Infinity,rate:0.45,base:51638},
+  ];
+
+  // Medicare levy
+  const MEDICARE_RATE=0.02;
+  // Medicare levy surcharge (no private health)
+  const MLS_BRACKETS=[
+    {min:0,max:93000,rate:0},
+    {min:93001,max:108000,rate:0.01},
+    {min:108001,max:144000,rate:0.0125},
+    {min:144001,max:Infinity,rate:0.015},
+  ];
+
+  // HELP repayment rates 2024-25
+  const HELP_BRACKETS=[
+    {min:0,max:54435,rate:0},
+    {min:54436,max:62850,rate:0.01},
+    {min:62851,max:66620,rate:0.02},
+    {min:66621,max:70618,rate:0.025},
+    {min:70619,max:74855,rate:0.03},
+    {min:74856,max:79346,rate:0.035},
+    {min:79347,max:84107,rate:0.04},
+    {min:84108,max:89154,rate:0.045},
+    {min:89155,max:94503,rate:0.05},
+    {min:94504,max:100174,rate:0.055},
+    {min:100175,max:106185,rate:0.06},
+    {min:106186,max:112556,rate:0.065},
+    {min:112557,max:119309,rate:0.07},
+    {min:119310,max:126467,rate:0.075},
+    {min:126468,max:134056,rate:0.08},
+    {min:134057,max:142100,rate:0.085},
+    {min:142101,max:150626,rate:0.09},
+    {min:150627,max:159663,rate:0.095},
+    {min:159664,max:Infinity,rate:0.10},
+  ];
+
+  const sal=parseFloat(salary)||0;
+  const other=parseFloat(otherIncome)||0;
+  const ded=parseFloat(deductions)||0;
+  const rentalComponent=netRental||0;
+
+  const grossIncome=sal+other+rentalComponent;
+  const taxableIncome=Math.max(0,grossIncome-ded);
+
+  // Income tax
+  const calcTax=(ti)=>{
+    if(ti<=0) return 0;
+    for(let i=BRACKETS.length-1;i>=0;i--){
+      if(ti>=BRACKETS[i].min) return BRACKETS[i].base+(ti-BRACKETS[i].min+1)*BRACKETS[i].rate;
+    }
+    return 0;
+  };
+  const incomeTax=Math.round(calcTax(taxableIncome)*100)/100;
+
+  // Tax without rental
+  const taxableWithoutRental=Math.max(0,sal+other-ded);
+  const taxWithoutRental=Math.round(calcTax(taxableWithoutRental)*100)/100;
+  const taxSaving=rentalComponent<0?Math.round((taxWithoutRental-incomeTax)*100)/100:0;
+
+  // Medicare levy
+  const medicare=taxableIncome>24276?Math.round(taxableIncome*MEDICARE_RATE*100)/100:0;
+
+  // Medicare levy surcharge
+  let mls=0;
+  if(privateHealth==='no'&&taxableIncome>93000){
+    for(let i=MLS_BRACKETS.length-1;i>=0;i--){
+      if(taxableIncome>=MLS_BRACKETS[i].min){mls=Math.round(taxableIncome*MLS_BRACKETS[i].rate*100)/100;break;}
+    }
+  }
+
+  // HELP repayment
+  let helpRepay=0;
+  if(helpDebt==='yes'){
+    for(let i=HELP_BRACKETS.length-1;i>=0;i--){
+      if(taxableIncome>=HELP_BRACKETS[i].min){helpRepay=Math.round(taxableIncome*HELP_BRACKETS[i].rate*100)/100;break;}
+    }
+  }
+
+  const totalTax=incomeTax+medicare+mls+helpRepay;
+  const effectiveRate=taxableIncome>0?Math.round(totalTax/taxableIncome*10000)/100:0;
+  const takeHome=grossIncome-totalTax;
+
+  // Bracket breakdown
+  const bracketBreakdown=BRACKETS.map((b,i)=>{
+    const lo=b.min===0?0:b.min;
+    const hi=b.max===Infinity?taxableIncome:Math.min(b.max,taxableIncome);
+    if(taxableIncome<lo) return null;
+    const taxable=hi-lo+(b.min===0?0:1);
+    const tax=taxable*b.rate;
+    return {label:b.max===Infinity?`$${lo.toLocaleString()}+`:`$${lo.toLocaleString()} – $${b.max.toLocaleString()}`,rate:`${b.rate*100}%`,taxable,tax};
+  }).filter(Boolean);
+
+  return(
+    <div>
+      <div className="section">
+        <h3>🧮 Australian Tax Brackets Calculator — FY 2024-25</h3>
+        <div className="ato-info">
+          <span className="ato-icon">ℹ️</span>
+          <div>Australian resident individual tax rates for the 2024-25 financial year (1 July 2024 – 30 June 2025). Stage 3 tax cuts applied. Net rental income from the property is automatically included.</div>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:16}}>
+          <div className="cgt-input"><label>Salary / Wages ($)</label><input type="number" value={salary} onChange={e=>setSalary(e.target.value)} placeholder="85000" /></div>
+          <div className="cgt-input"><label>Other Income ($)</label><input type="number" value={otherIncome} onChange={e=>setOtherIncome(e.target.value)} placeholder="0" /></div>
+          <div className="cgt-input"><label>Deductions ($)</label><input type="number" value={deductions} onChange={e=>setDeductions(e.target.value)} placeholder="0" /></div>
+          <div className="cgt-input"><label>Private Health Insurance?</label>
+            <select value={privateHealth} onChange={e=>setPrivateHealth(e.target.value)}>
+              <option value="yes">Yes</option><option value="no">No</option>
+            </select>
+          </div>
+          <div className="cgt-input"><label>HELP / HECS Debt?</label>
+            <select value={helpDebt} onChange={e=>setHelpDebt(e.target.value)}>
+              <option value="no">No</option><option value="yes">Yes</option>
+            </select>
+          </div>
+          <div className="cgt-input"><label>Net Rental Income (auto)</label>
+            <input type="number" value={rentalComponent} readOnly style={{opacity:.7}} />
+          </div>
+        </div>
+
+        {/* Income summary */}
+        <div className="tax-summary">
+          <div className="tax-block">
+            <h4>Income Breakdown</h4>
+            <div className="tx-row"><span>Salary / Wages</span><span className="tv">{fmt(sal)}</span></div>
+            <div className="tx-row"><span>Other Income</span><span className="tv">{fmt(other)}</span></div>
+            <div className="tx-row"><span>Net Rental Income</span><span className={`tv ${rentalComponent>=0?'pos':'neg'}`}>{fmt(rentalComponent)}</span></div>
+            <div className="tx-row"><span>- Deductions</span><span className="tv neg">{fmt(ded)}</span></div>
+            <div className="tx-row total"><span>Taxable Income</span><span className="tv">{fmt(taxableIncome)}</span></div>
+          </div>
+
+          <div className="tax-block">
+            <h4>Tax Payable</h4>
+            <div className="tx-row"><span>Income Tax</span><span className="tv neg">{fmt(incomeTax)}</span></div>
+            <div className="tx-row"><span>Medicare Levy (2%)</span><span className="tv neg">{fmt(medicare)}</span></div>
+            {mls>0&&<div className="tx-row"><span>Medicare Surcharge</span><span className="tv neg">{fmt(mls)}</span></div>}
+            {helpRepay>0&&<div className="tx-row"><span>HELP Repayment</span><span className="tv neg">{fmt(helpRepay)}</span></div>}
+            <div className="tx-row total"><span>Total Tax</span><span className="tv neg">{fmt(totalTax)}</span></div>
+            <div className="tx-row"><span>Effective Tax Rate</span><span className="tv">{effectiveRate}%</span></div>
+            <div className="tx-row" style={{fontWeight:600,color:'var(--green)'}}><span>Take-Home (Annual)</span><span className="tv pos">{fmt(takeHome)}</span></div>
+            <div className="tx-row" style={{color:'var(--text-sec)'}}><span>Take-Home (Monthly)</span><span className="tv">{fmt(takeHome/12)}</span></div>
+            <div className="tx-row" style={{color:'var(--text-sec)'}}><span>Take-Home (Fortnightly)</span><span className="tv">{fmt(takeHome/26)}</span></div>
+          </div>
+        </div>
+
+        {/* Negative gearing benefit */}
+        {taxSaving>0&&(
+          <div style={{marginTop:16,padding:16,background:'var(--green-bg)',border:'1px solid var(--border)',borderRadius:'var(--radius-lg)',textAlign:'center'}}>
+            <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.5px',color:'var(--text-dim)'}}>Negative Gearing Tax Benefit</div>
+            <div style={{fontSize:28,fontWeight:800,color:'var(--green)',marginTop:4}}>{fmt(taxSaving)}</div>
+            <div style={{fontSize:12,color:'var(--text-sec)',marginTop:4}}>Your rental loss of {fmt(Math.abs(rentalComponent))} saves you {fmt(taxSaving)} in tax compared to not having the investment property.</div>
+          </div>
+        )}
+
+        {/* Bracket breakdown */}
+        <div className="section" style={{marginTop:16}}>
+          <h3>Tax Bracket Breakdown</h3>
+          <table className="tbl">
+            <thead><tr><th>Bracket</th><th>Rate</th><th style={{textAlign:'right'}}>Taxable Amount</th><th style={{textAlign:'right'}}>Tax</th></tr></thead>
+            <tbody>
+              {bracketBreakdown.map((b,i)=>(
+                <tr key={i}>
+                  <td>{b.label}</td>
+                  <td>{b.rate}</td>
+                  <td className="amt">{fmt(b.taxable)}</td>
+                  <td className="amt neg">{fmt(b.tax)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot><tr style={{fontWeight:700}}><td colSpan={2}>Total Income Tax</td><td></td><td className="amt neg">{fmt(incomeTax)}</td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Stamp Duty Calculator ──
+function StampDutyCalc({prop}){
+  const [price,setPrice]=useState(prop?.purchasePrice||'');
+  const [state,setState]=useState(prop?.state||'NSW');
+  const [purpose,setPurpose]=useState('investment');
+  const [firstHome,setFirstHome]=useState('no');
+  const [foreign,setForeign]=useState('no');
+
+  const p=parseFloat(price)||0;
+
+  // Stamp duty rates by state (general/investment rates, simplified 2024-25)
+  const calcStampDuty=(price,st)=>{
+    switch(st){
+      case 'NSW':{
+        // NSW rates (general)
+        if(price<=16000) return price*0.0125;
+        if(price<=35000) return 200+(price-16000)*0.015;
+        if(price<=93000) return 485+(price-35000)*0.0175;
+        if(price<=351000) return 1500+(price-93000)*0.035;
+        if(price<=1168000) return 10530+(price-351000)*0.045;
+        return 47295+(price-1168000)*0.055;
+      }
+      case 'VIC':{
+        // VIC rates (general)
+        if(price<=25000) return price*0.014;
+        if(price<=130000) return 350+(price-25000)*0.024;
+        if(price<=960000) return 2870+(price-130000)*0.06;
+        if(price<=2000000) return 52670+(price-960000)*0.055; // changed to 5.5% for this band
+        return Math.round(price*0.065); // premium rate
+      }
+      case 'QLD':{
+        // QLD rates
+        if(price<=5000) return 0;
+        if(price<=75000) return 1050+(price-75000>0?0:(price-5000)*0.015);
+        if(price<=540000) return 1050+(price-75000)*0.035;
+        if(price<=1000000) return 17325+(price-540000)*0.045;
+        return 38025+(price-1000000)*0.0575;
+      }
+      case 'WA':{
+        // WA rates
+        if(price<=120000) return price*0.019;
+        if(price<=150000) return 2280+(price-120000)*0.0285;
+        if(price<=360000) return 3135+(price-150000)*0.038;
+        if(price<=725000) return 11115+(price-360000)*0.0475;
+        return 28453+(price-725000)*0.0515;
+      }
+      case 'SA':{
+        // SA rates
+        if(price<=12000) return price*0.01;
+        if(price<=30000) return 120+(price-12000)*0.02;
+        if(price<=50000) return 480+(price-30000)*0.03;
+        if(price<=100000) return 1080+(price-50000)*0.035;
+        if(price<=200000) return 2830+(price-100000)*0.04;
+        if(price<=250000) return 6830+(price-200000)*0.045;
+        if(price<=300000) return 9080+(price-250000)*0.05;
+        if(price<=500000) return 11330+(price-300000)*0.05;
+        return 21330+(price-500000)*0.055;
+      }
+      case 'TAS':{
+        // TAS rates
+        if(price<=3000) return 50;
+        if(price<=25000) return 50+(price-3000)*0.0175;
+        if(price<=75000) return 435+(price-25000)*0.025;
+        if(price<=200000) return 1685+(price-75000)*0.035;
+        if(price<=375000) return 6060+(price-200000)*0.04;
+        if(price<=725000) return 13060+(price-375000)*0.0425;
+        return 27935+(price-725000)*0.045;
+      }
+      case 'ACT':{
+        // ACT rates (general)
+        if(price<=260000) return price*0.006;
+        if(price<=300000) return 1560+(price-260000)*0.023;
+        if(price<=500000) return 2480+(price-300000)*0.034;
+        if(price<=750000) return 9280+(price-500000)*0.041;
+        if(price<=1000000) return 19530+(price-750000)*0.0505;
+        if(price<=1455000) return 32155+(price-1000000)*0.056;
+        return 57635+(price-1455000)*0.0565;
+      }
+      case 'NT':{
+        // NT uses a formula: D = (0.06571441 × V^2) / 1000
+        const v=price/1000;
+        return Math.round((0.06571441*v*v)*100)/100;
+      }
+      default: return 0;
+    }
+  };
+
+  const baseDuty=Math.round(calcStampDuty(p,state)*100)/100;
+
+  // Foreign buyer surcharge
+  const FOREIGN_SURCHARGE={NSW:0.08,VIC:0.08,QLD:0.07,WA:0.07,SA:0.07,TAS:0.03,ACT:0,NT:0};
+  const foreignSurcharge=foreign==='yes'?Math.round(p*(FOREIGN_SURCHARGE[state]||0)*100)/100:0;
+
+  // VIC investment surcharge (premium property, general already included but noting it)
+  // First home buyer concessions (simplified)
+  let fhbDiscount=0;
+  let fhbNote='';
+  if(firstHome==='yes'&&purpose==='owner-occupier'){
+    switch(state){
+      case 'NSW': if(p<=800000){fhbDiscount=baseDuty;fhbNote='Full exemption for properties up to $800,000 (First Home Buyer Assistance Scheme)';} else if(p<=1000000){fhbDiscount=baseDuty*((1000000-p)/200000);fhbNote='Partial concession for $800,001-$1,000,000';} break;
+      case 'VIC': if(p<=600000){fhbDiscount=baseDuty;fhbNote='Full exemption for properties up to $600,000';} else if(p<=750000){fhbDiscount=baseDuty*((750000-p)/150000);fhbNote='Partial concession for $600,001-$750,000';} break;
+      case 'QLD': if(p<=500000){fhbDiscount=baseDuty;fhbNote='Full concession for homes up to $500,000 (vacant land $250,000)';} else if(p<=550000){fhbDiscount=baseDuty*((550000-p)/50000);fhbNote='Partial concession for $500,001-$550,000';} break;
+      case 'WA': if(p<=430000){fhbDiscount=baseDuty;fhbNote='Full exemption up to $430,000';} else if(p<=530000){fhbDiscount=baseDuty*((530000-p)/100000);fhbNote='Partial concession for $430,001-$530,000';} break;
+      case 'SA': fhbNote='No stamp duty concession for FHB in SA (but $15,000 FHOG available)'; break;
+      case 'TAS': if(p<=400000){fhbDiscount=Math.min(baseDuty,7000);fhbNote='50% duty discount up to $7,000 for properties up to $400,000';} break;
+      case 'ACT': fhbNote='ACT Home Buyer Concession Scheme — full duty waiver for eligible buyers (income test applies)'; if(p<=1000000) fhbDiscount=baseDuty; break;
+      case 'NT': if(p<=650000){fhbDiscount=baseDuty;fhbNote='Full stamp duty abolished for FHBs up to $650,000';} break;
+    }
+  }
+
+  const totalDuty=Math.max(0,baseDuty-fhbDiscount)+foreignSurcharge;
+  const dutyPct=p>0?Math.round(totalDuty/p*10000)/100:0;
+
+  return(
+    <div>
+      <div className="section">
+        <h3>🏛️ Stamp Duty Calculator (Transfer Duty)</h3>
+        <div className="ato-info">
+          <span className="ato-icon">ℹ️</span>
+          <div>Stamp duty (transfer duty) is a state/territory tax payable on property purchases. Rates vary by jurisdiction. This is an <strong>estimate only</strong> — consult your conveyancer or state revenue office for exact amounts. Stamp duty is <strong>not tax deductible</strong> but forms part of the property's cost base for CGT.</div>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:16}}>
+          <div className="cgt-input"><label>Property Price ($)</label><input type="number" value={price} onChange={e=>setPrice(e.target.value)} placeholder="650000" /></div>
+          <div className="cgt-input"><label>State / Territory</label>
+            <select value={state} onChange={e=>setState(e.target.value)}>
+              {['NSW','VIC','QLD','WA','SA','TAS','ACT','NT'].map(s=><option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="cgt-input"><label>Purpose</label>
+            <select value={purpose} onChange={e=>setPurpose(e.target.value)}>
+              <option value="investment">Investment</option>
+              <option value="owner-occupier">Owner-Occupier</option>
+            </select>
+          </div>
+          <div className="cgt-input"><label>First Home Buyer?</label>
+            <select value={firstHome} onChange={e=>setFirstHome(e.target.value)}>
+              <option value="no">No</option><option value="yes">Yes</option>
+            </select>
+          </div>
+          <div className="cgt-input"><label>Foreign Buyer?</label>
+            <select value={foreign} onChange={e=>setForeign(e.target.value)}>
+              <option value="no">No</option><option value="yes">Yes</option>
+            </select>
+          </div>
+        </div>
+
+        {p>0&&(
+          <div className="cgt-result">
+            <div className="tx-row"><span>Property Price</span><span className="tv">{fmt(p)}</span></div>
+            <div className="tx-row"><span>Base Stamp Duty ({state})</span><span className="tv neg">{fmt(baseDuty)}</span></div>
+            {fhbDiscount>0&&<div className="tx-row"><span>First Home Buyer Discount</span><span className="tv pos">- {fmt(fhbDiscount)}</span></div>}
+            {foreignSurcharge>0&&<div className="tx-row"><span>Foreign Buyer Surcharge ({(FOREIGN_SURCHARGE[state]*100)}%)</span><span className="tv neg">{fmt(foreignSurcharge)}</span></div>}
+            <div className="tx-row total"><span>Total Stamp Duty Payable</span><span className="tv neg">{fmt(totalDuty)}</span></div>
+            <div className="tx-row"><span>Duty as % of Price</span><span className="tv">{dutyPct}%</span></div>
+            <div className="tx-row" style={{color:'var(--text-sec)'}}><span>Total Purchase Cost (Price + Duty)</span><span className="tv">{fmt(p+totalDuty)}</span></div>
+            {fhbNote&&<div style={{marginTop:8,fontSize:12,color:'var(--accent)',fontStyle:'italic'}}>💡 {fhbNote}</div>}
+          </div>
+        )}
+
+        {/* State comparison */}
+        {p>0&&(
+          <div className="section" style={{marginTop:16}}>
+            <h3>State-by-State Comparison</h3>
+            <table className="tbl">
+              <thead><tr><th>State</th><th style={{textAlign:'right'}}>Stamp Duty</th><th style={{textAlign:'right'}}>% of Price</th><th style={{textAlign:'right'}}>Total Cost</th></tr></thead>
+              <tbody>
+                {['NSW','VIC','QLD','WA','SA','TAS','ACT','NT'].map(s=>{
+                  const d=Math.round(calcStampDuty(p,s)*100)/100;
+                  return(
+                    <tr key={s} style={s===state?{background:'var(--accent-light)',fontWeight:600}:{}}>
+                      <td>{s}{s===state?' ✓':''}</td>
+                      <td className="amt neg">{fmt(d)}</td>
+                      <td className="amt">{(d/p*100).toFixed(2)}%</td>
+                      <td className="amt">{fmt(p+d)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Land Tax Estimator ──
+function LandTaxCalc({prop}){
+  const [landValue,setLandValue]=useState('');
+  const [state,setState]=useState(prop?.state||'NSW');
+  const [owner,setOwner]=useState('individual');
+  const [principal,setPrincipal]=useState('no');
+  const [totalLandAll,setTotalLandAll]=useState('');
+
+  const lv=parseFloat(landValue)||0;
+  const totalLand=parseFloat(totalLandAll)||lv;
+
+  // Land tax rates by state (2024-25, general/investment, not PPR)
+  const calcLandTax=(value,st,ownerType)=>{
+    // Principal place of residence is exempt
+    if(principal==='yes') return {tax:0,note:'Principal place of residence is exempt from land tax in all states.'};
+
+    switch(st){
+      case 'NSW':{
+        // General: threshold $1,075,000. Tax: $100 + 1.6% over threshold. Premium >$6,571,000: add 2%
+        const thresh=ownerType==='trust'?0:1075000;
+        if(value<=thresh) return {tax:0,note:`NSW threshold: $${thresh.toLocaleString()}. Land value below threshold.`};
+        const premium=6571000;
+        if(value<=premium) return {tax:100+(value-thresh)*0.016,note:`General rate: $100 + 1.6% of value over $${thresh.toLocaleString()}`};
+        return {tax:100+(premium-thresh)*0.016+(value-premium)*0.02,note:'Premium rate applies above $6,571,000 (additional 2%)'};
+      }
+      case 'VIC':{
+        // General: threshold $50,000 (trusts $25,000)
+        const thresh=ownerType==='trust'?25000:50000;
+        if(value<=thresh) return {tax:0,note:`VIC threshold: $${thresh.toLocaleString()}.`};
+        if(value<=100000) return {tax:(value-thresh)*0.0002*20,note:'$50,001-$100,000: variable rate'};
+        if(value<=300000) return {tax:275+(value-100000)*0.002,note:'$100,001-$300,000: 0.2%'};
+        if(value<=600000) return {tax:675+(value-300000)*0.005,note:'$300,001-$600,000: 0.5%'};
+        if(value<=1000000) return {tax:2175+(value-600000)*0.008,note:'$600,001-$1,000,000: 0.8%'};
+        if(value<=1800000) return {tax:5375+(value-1000000)*0.013,note:'$1,000,001-$1,800,000: 1.3%'};
+        if(value<=3000000) return {tax:15775+(value-1800000)*0.022,note:'$1,800,001-$3,000,000: 2.2%'};
+        return {tax:42175+(value-3000000)*0.025,note:'Over $3,000,000: 2.5%'};
+      }
+      case 'QLD':{
+        // Individual: threshold $600,000
+        const thresh=600000;
+        if(value<=thresh) return {tax:0,note:'QLD threshold: $600,000 (individuals).'};
+        if(value<=1000000) return {tax:(value-thresh)*0.01,note:'$600,001-$1,000,000: 1.0%'};
+        if(value<=3000000) return {tax:4000+(value-1000000)*0.0175,note:'$1,000,001-$3,000,000: 1.75%'};
+        if(value<=5000000) return {tax:39000+(value-3000000)*0.0125,note:'$3,000,001-$5,000,000: 1.25%'};
+        if(value<=10000000) return {tax:64000+(value-5000000)*0.0175,note:'$5,000,001-$10,000,000: 1.75%'};
+        return {tax:151500+(value-10000000)*0.0275,note:'Over $10,000,000: 2.75%'};
+      }
+      case 'WA':{
+        const thresh=300000;
+        if(value<=thresh) return {tax:0,note:'WA threshold: $300,000.'};
+        if(value<=420000) return {tax:300,note:'$300,001-$420,000: flat $300'};
+        if(value<=1000000) return {tax:300+(value-420000)*0.0025,note:'$420,001-$1,000,000: 0.25%'};
+        if(value<=1800000) return {tax:1750+(value-1000000)*0.009,note:'$1,000,001-$1,800,000: 0.9%'};
+        if(value<=5000000) return {tax:8950+(value-1800000)*0.018,note:'$1,800,001-$5,000,000: 1.8%'};
+        if(value<=11000000) return {tax:66550+(value-5000000)*0.022,note:'$5,000,001-$11,000,000: 2.2%'};
+        return {tax:198550+(value-11000000)*0.027,note:'Over $11,000,000: 2.7%'};
+      }
+      case 'SA':{
+        const thresh=450000;
+        if(value<=thresh) return {tax:0,note:'SA threshold: $450,000.'};
+        if(value<=767000) return {tax:(value-thresh)*0.005,note:'$450,001-$767,000: 0.5%'};
+        if(value<=1000000) return {tax:1585+(value-767000)*0.01,note:'$767,001-$1,000,000: 1.0%'};
+        return {tax:3915+(value-1000000)*0.024,note:'Over $1,000,000: 2.4%'};
+      }
+      case 'TAS':{
+        const thresh=100000;
+        if(value<=thresh) return {tax:0,note:'TAS threshold: $100,000.'};
+        if(value<=250000) return {tax:50+(value-100000)*0.005,note:'$100,001-$250,000: 0.5%'};
+        if(value<=350000) return {tax:800+(value-250000)*0.0075,note:'$250,001-$350,000: 0.75%'};
+        if(value<=500000) return {tax:1550+(value-350000)*0.01,note:'$350,001-$500,000: 1.0%'};
+        if(value<=750000) return {tax:3050+(value-500000)*0.0125,note:'$500,001-$750,000: 1.25%'};
+        return {tax:6175+(value-750000)*0.015,note:'Over $750,000: 1.5%'};
+      }
+      case 'ACT':{
+        // ACT uses unimproved land value, progressive rates
+        if(value<=150000) return {tax:value*0.0054,note:'Up to $150,000: 0.54%'};
+        if(value<=300000) return {tax:810+(value-150000)*0.0064,note:'$150,001-$300,000: 0.64%'};
+        if(value<=450000) return {tax:1770+(value-300000)*0.0109,note:'$300,001-$450,000: 1.09%'};
+        if(value<=600000) return {tax:3405+(value-450000)*0.0124,note:'$450,001-$600,000: 1.24%'};
+        if(value<=750000) return {tax:5265+(value-600000)*0.0156,note:'$600,001-$750,000: 1.56%'};
+        return {tax:7605+(value-750000)*0.0198,note:'Over $750,000: 1.98%'};
+      }
+      case 'NT':{
+        return {tax:0,note:'NT does not have land tax.'};
+      }
+      default: return {tax:0,note:''};
+    }
+  };
+
+  const result=calcLandTax(totalLand,state,owner);
+  const landTax=Math.round(result.tax*100)/100;
+  const landTaxPct=lv>0?Math.round(landTax/lv*10000)/100:0;
+  const perWeek=landTax>0?Math.round(landTax/52*100)/100:0;
+
+  return(
+    <div>
+      <div className="section">
+        <h3>🗺️ Land Tax Estimator</h3>
+        <div className="ato-info">
+          <span className="ato-icon">ℹ️</span>
+          <div>
+            Land tax is an annual state/territory tax based on the <strong>unimproved land value</strong> (not property value).
+            Your <strong>principal place of residence is exempt</strong>.
+            Land tax is assessed on the <strong>total taxable land</strong> you own in a state — enter all your land holdings to get the correct bracket.
+            Land tax paid on investment properties <strong>is tax deductible</strong>.
+          </div>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:16}}>
+          <div className="cgt-input"><label>Land Value — This Property ($)</label><input type="number" value={landValue} onChange={e=>setLandValue(e.target.value)} placeholder="350000" /></div>
+          <div className="cgt-input"><label>Total Land in {state} ($)</label><input type="number" value={totalLandAll} onChange={e=>setTotalLandAll(e.target.value)} placeholder="Same as above if only one property" /><div style={{fontSize:10,color:'var(--text-dim)',marginTop:2}}>All taxable land owned in this state</div></div>
+          <div className="cgt-input"><label>State / Territory</label>
+            <select value={state} onChange={e=>setState(e.target.value)}>
+              {['NSW','VIC','QLD','WA','SA','TAS','ACT','NT'].map(s=><option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="cgt-input"><label>Owner Type</label>
+            <select value={owner} onChange={e=>setOwner(e.target.value)}>
+              <option value="individual">Individual</option>
+              <option value="trust">Trust / Company</option>
+            </select>
+          </div>
+          <div className="cgt-input"><label>Principal Residence?</label>
+            <select value={principal} onChange={e=>setPrincipal(e.target.value)}>
+              <option value="no">No (Investment)</option>
+              <option value="yes">Yes (PPR — Exempt)</option>
+            </select>
+          </div>
+        </div>
+
+        {lv>0&&(
+          <div className="cgt-result">
+            <div className="tx-row"><span>This Property Land Value</span><span className="tv">{fmt(lv)}</span></div>
+            {totalLand!==lv&&<div className="tx-row"><span>Total Taxable Land in {state}</span><span className="tv">{fmt(totalLand)}</span></div>}
+            <div className="tx-row total"><span>Estimated Annual Land Tax</span><span className={`tv ${landTax>0?'neg':''}`}>{fmt(landTax)}</span></div>
+            {landTax>0&&(
+              <>
+                <div className="tx-row"><span>Per Quarter</span><span className="tv">{fmt(landTax/4)}</span></div>
+                <div className="tx-row"><span>Per Week</span><span className="tv">{fmt(perWeek)}</span></div>
+                <div className="tx-row"><span>Effective Rate</span><span className="tv">{landTaxPct}%</span></div>
+              </>
+            )}
+            <div style={{marginTop:8,fontSize:12,color:'var(--accent)',fontStyle:'italic'}}>💡 {result.note}</div>
+            {landTax>0&&<div style={{marginTop:4,fontSize:12,color:'var(--green)'}}>✓ Land tax on investment property is tax deductible — add it to your Expenses tab.</div>}
+          </div>
+        )}
+
+        {/* State comparison */}
+        {lv>0&&principal==='no'&&(
+          <div className="section" style={{marginTop:16}}>
+            <h3>State-by-State Comparison (Same Land Value)</h3>
+            <table className="tbl">
+              <thead><tr><th>State</th><th>Threshold</th><th style={{textAlign:'right'}}>Annual Land Tax</th><th style={{textAlign:'right'}}>Per Week</th><th>Note</th></tr></thead>
+              <tbody>
+                {['NSW','VIC','QLD','WA','SA','TAS','ACT','NT'].map(s=>{
+                  const r=calcLandTax(lv,s,owner);
+                  const t=Math.round(r.tax*100)/100;
+                  const thresholds={NSW:'$1,075,000',VIC:'$50,000',QLD:'$600,000',WA:'$300,000',SA:'$450,000',TAS:'$100,000',ACT:'Nil',NT:'N/A'};
+                  return(
+                    <tr key={s} style={s===state?{background:'var(--accent-light)',fontWeight:600}:{}}>
+                      <td>{s}{s===state?' ✓':''}</td>
+                      <td style={{fontSize:12}}>{thresholds[s]}</td>
+                      <td className={`amt ${t>0?'neg':''}`}>{t>0?fmt(t):'$0 (exempt)'}</td>
+                      <td className="amt">{t>0?fmt(t/52):'—'}</td>
+                      <td style={{fontSize:11,color:'var(--text-dim)',maxWidth:200}}>{s==='NT'?'No land tax':'—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+</script>
+</body>
+</html>
