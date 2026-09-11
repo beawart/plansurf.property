@@ -176,7 +176,7 @@ const S='inv-property-v1';
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d;}catch{return d;}};
 const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const GITHUB_CONFIG='inv-property-github-v1';
-const DEFAULT_SYNC_CONFIG={owner:'beawart',repo:'propertymanager-data',path:'propertymanagerdata.json',branch:'main'};
+const DEFAULT_SYNC_CONFIG={owner:'beawart',repo:'plansurf-data',path:'plansurf.property-data.json',branch:'main'};
 const getSyncConfig=()=>{const saved=load(GITHUB_CONFIG,{});return{owner:saved.owner||DEFAULT_SYNC_CONFIG.owner,repo:saved.repo||DEFAULT_SYNC_CONFIG.repo,path:saved.path||DEFAULT_SYNC_CONFIG.path,branch:saved.branch||DEFAULT_SYNC_CONFIG.branch};};
 const b64encode=s=>{const bytes=new TextEncoder().encode(s);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin);};
 const b64decode=s=>{const bin=atob(s.replace(/\n/g,'')),bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes);};
