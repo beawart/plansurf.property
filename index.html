@@ -176,11 +176,12 @@ const S='inv-property-v1';
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d;}catch{return d;}};
 const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const GITHUB_CONFIG='inv-property-github-v1';
+const SYNC_BUILD='property-sync-2026-09-11-1';
 const DEFAULT_SYNC_CONFIG={owner:'beawart',repo:'plansurf-data',path:'plansurf.property-data.json',branch:'main'};
 const getSyncConfig=()=>{const saved=load(GITHUB_CONFIG,{});return{owner:saved.owner||DEFAULT_SYNC_CONFIG.owner,repo:saved.repo||DEFAULT_SYNC_CONFIG.repo,path:saved.path||DEFAULT_SYNC_CONFIG.path,branch:saved.branch||DEFAULT_SYNC_CONFIG.branch};};
 const b64encode=s=>{const bytes=new TextEncoder().encode(s);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin);};
 const b64decode=s=>{const bin=atob(s.replace(/\n/g,'')),bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes);};
-const githubError=x=>{if(x.includes('401'))return'Token is invalid or expired.';if(x.includes('403'))return'Token lacks repository access.';if(x.includes('404'))return'Repository or data file was not found.';if(x.includes('409'))return'The file changed elsewhere. Pull the latest copy first.';return x.slice(0,180);};
+const githubError=x=>{try{const data=JSON.parse(x);if(data.message)return data.message;}catch{}if(x.includes('401'))return'Token is invalid or expired.';if(x.includes('403'))return'Token lacks repository access.';if(x.includes('404'))return'Repository or property file was not found.';if(x.includes('409'))return'The file changed elsewhere. Pull the latest copy first.';return x.slice(0,180);};
 const uid=()=>Math.random().toString(36).substr(2,9)+Date.now().toString(36);
 const num=value=>{const parsed=Number(value);return Number.isFinite(parsed)?parsed:0;};
 const sumBy=(rows,key)=>rows.reduce((sum,row)=>sum+num(row[key]),0);
@@ -509,39 +510,62 @@ function App(){
   },[properties,incomes,expenses,fy]);
 
   const syncData={version:1,properties,incomes,expenses,capitals,depreciations,updatedAt:new Date().toISOString()};
-  const githubUrl=()=>`https://api.github.com/repos/${encodeURIComponent(syncConfig.owner)}/${encodeURIComponent(syncConfig.repo)}/contents/${syncConfig.path.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(syncConfig.branch)}`;
+  const githubContentsUrl=config=>`https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}/contents/${config.path.split('/').map(encodeURIComponent).join('/')}`;
+  const githubUrl=config=>`${githubContentsUrl(config)}?ref=${encodeURIComponent(config.branch)}`;
+  const githubRepoUrl=config=>`https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}`;
   const githubHeaders=()=>({'Accept':'application/vnd.github+json','Authorization':`Bearer ${githubToken}`,'X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'});
-  const validSync=()=>syncConfig.owner&&syncConfig.repo&&syncConfig.path&&syncConfig.branch&&githubToken;
+  const validSync=config=>config.owner&&config.repo&&config.path&&config.branch&&githubToken;
   const saveSyncConfig=config=>{setSyncConfig(config);save(GITHUB_CONFIG,config);};
+  const getGitHubFile=async config=>{
+    const url=githubUrl(config);
+    let response=await fetch(url,{headers:githubHeaders(),cache:'no-store'});
+    if(response.status===404) response=await fetch(`${url}&refresh=${Date.now()}`,{headers:githubHeaders(),cache:'no-store'});
+    return response;
+  };
+  const explainNotFound=async config=>{
+    const repoResponse=await fetch(githubRepoUrl(config),{headers:githubHeaders(),cache:'no-store'});
+    if(repoResponse.ok)return`Property file not found at ${config.path} on branch ${config.branch}. Check the GitHub filename and branch, then use Save local data.`;
+    if(repoResponse.status===401)return'Token is invalid or expired.';
+    if(repoResponse.status===403)return'Token lacks permission to view this repository.';
+    return`Repository ${config.owner}/${config.repo} is not visible to this token. Check the owner, repository name, and token repository access.`;
+  };
   const applySyncData=d=>{
     if(!Array.isArray(d.properties)||typeof d.incomes!=='object'||typeof d.expenses!=='object'||typeof d.capitals!=='object'||typeof d.depreciations!=='object')throw new Error('The JSON file has an unexpected format.');
     suppressDirty.current=true;
     setProperties(d.properties);setIncomes(d.incomes);setExpenses(d.expenses);setCapitals(d.capitals);setDepreciations(d.depreciations);
   };
-  const pullGitHub=async()=>{
-    if(!validSync()){setSyncStatus('Complete GitHub settings first');return;}
+  const pullGitHub=async(config=syncConfig)=>{
+    if(!validSync(config)){setSyncStatus('Complete GitHub settings first');return;}
     if(dirty&&!window.confirm('Pulling will replace unsaved local changes. Continue?'))return;
-    setSyncing(true);setSyncStatus('Pulling from GitHub...');
+    setSyncing(true);setSyncStatus('Pulling property data from GitHub...');
     try{
-      const response=await fetch(githubUrl(),{headers:githubHeaders()});
-      if(response.status===404)throw new Error('404');
+      const response=await getGitHubFile(config);
+      if(response.status===404){setSyncStatus(`Pull failed: file read returned 404; ${await explainNotFound(config)} · ${SYNC_BUILD}`);return;}
       if(!response.ok)throw new Error(`${response.status} ${await response.text()}`);
       const remote=JSON.parse(b64decode((await response.json()).content));
-      applySyncData(remote);setDirty(false);setSyncStatus('Synced from GitHub');
+      applySyncData(remote);setDirty(false);setSyncStatus('Property data synced from GitHub');
     }catch(error){setSyncStatus('Pull failed: '+githubError(error.message));}
     finally{setSyncing(false);}
   };
-  const pushGitHub=async()=>{
-    if(!validSync()){setSyncStatus('Complete GitHub settings first');return;}
-    setSyncing(true);setSyncStatus('Saving to GitHub...');
+  const pushGitHub=async(config=syncConfig)=>{
+    if(!validSync(config)){setSyncStatus('Complete GitHub settings first');return;}
+    setSyncing(true);setSyncStatus('Saving property data to GitHub...');
     try{
-      const url=githubUrl();let sha=null;const existing=await fetch(url,{headers:githubHeaders()});
+      const url=githubContentsUrl(config);let sha=null;const existing=await getGitHubFile(config);
       if(existing.ok)sha=(await existing.json()).sha;else if(existing.status!==404)throw new Error(`${existing.status} ${await existing.text()}`);
-      const body={message:'Update investment property data',content:b64encode(JSON.stringify(syncData,null,2)),branch:syncConfig.branch};
+      if(!sha){
+        const repoResponse=await fetch(githubRepoUrl(config),{headers:githubHeaders(),cache:'no-store'});
+        if(!repoResponse.ok)throw new Error(`${repoResponse.status} ${await repoResponse.text()}`);
+      }
+      const body={message:'Update PlanSurf property data',content:b64encode(JSON.stringify(syncData,null,2)),branch:config.branch};
       if(sha)body.sha=sha;
-      const response=await fetch(url.replace(/\?ref=.*$/,''),{method:'PUT',headers:githubHeaders(),body:JSON.stringify(body)});
+      let response=await fetch(url,{method:'PUT',headers:githubHeaders(),body:JSON.stringify(body)});
+      if(response.status===422&&!sha){
+        const retry=await getGitHubFile(config);
+        if(retry.ok){body.sha=(await retry.json()).sha;response=await fetch(url,{method:'PUT',headers:githubHeaders(),body:JSON.stringify(body)});}
+      }
       if(!response.ok)throw new Error(`${response.status} ${await response.text()}`);
-      setDirty(false);setSyncStatus('Backed up to private GitHub repo');
+      setDirty(false);setSyncStatus('Property data backed up to private GitHub repo');
     }catch(error){setSyncStatus('Backup failed: '+githubError(error.message));}
     finally{setSyncing(false);}
   };
@@ -1153,15 +1177,15 @@ function SyncModal({config,token,dirty,syncing,onClose,onConfig,onToken,onPull,o
   const [repo,setRepo]=useState(config.repo||DEFAULT_SYNC_CONFIG.repo);
   const [path,setPath]=useState(config.path||DEFAULT_SYNC_CONFIG.path);
   const [branch,setBranch]=useState(config.branch||DEFAULT_SYNC_CONFIG.branch);
-  const saveSettings=()=>onConfig({owner:owner.trim()||DEFAULT_SYNC_CONFIG.owner,repo:repo.trim()||DEFAULT_SYNC_CONFIG.repo,path:path.trim()||DEFAULT_SYNC_CONFIG.path,branch:branch.trim()||DEFAULT_SYNC_CONFIG.branch});
+  const saveSettings=()=>({owner:owner.trim()||DEFAULT_SYNC_CONFIG.owner,repo:repo.trim()||DEFAULT_SYNC_CONFIG.repo,path:path.trim()||DEFAULT_SYNC_CONFIG.path,branch:branch.trim()||DEFAULT_SYNC_CONFIG.branch});
   return <div className="modal-ov" onClick={onClose}><div className="modal" onClick={e=>e.stopPropagation()}>
     <h3>☁ Private GitHub Backup</h3>
-    <div className="sync-note">Your existing local property data stays in this browser. Use <strong>Save local data</strong> to create the first backup in your private repository. The token is used only for this session and is never stored.</div>
-    <div className="fg-row"><div className="fg"><label>GitHub owner / username</label><input value={owner} onChange={e=>setOwner(e.target.value)} placeholder="your-username" /></div><div className="fg"><label>Private repository</label><input value={repo} onChange={e=>setRepo(e.target.value)} placeholder="property-manager-data" /></div></div>
-    <div className="fg-row"><div className="fg"><label>Data file path</label><input value={path} onChange={e=>setPath(e.target.value)} /></div><div className="fg"><label>Branch</label><input value={branch} onChange={e=>setBranch(e.target.value)} /></div></div>
+    <div className="sync-note">Your existing local property data stays in this browser. Use <strong>Save local data</strong> to create or update the property JSON file in your private repository. The token is used only for this session and is never stored.</div>
+    <div className="fg-row"><div className="fg"><label>GitHub owner / username</label><input value={owner} onChange={e=>setOwner(e.target.value)} placeholder="beawart" /></div><div className="fg"><label>Private repository</label><input value={repo} onChange={e=>setRepo(e.target.value)} placeholder="plansurf-data" /></div></div>
+    <div className="fg-row"><div className="fg"><label>Property data file path</label><input value={path} onChange={e=>setPath(e.target.value)} placeholder="plansurf.property-data.json" /></div><div className="fg"><label>Branch</label><input value={branch} onChange={e=>setBranch(e.target.value)} placeholder="main" /></div></div>
     <div className="fg"><label>Fine-grained personal access token</label><input type="password" value={token} onChange={e=>onToken(e.target.value)} placeholder="github_pat_..." /><div className="hint">Grant Contents: Read and write for this private repository only.</div></div>
     <div className="sync-note">Status: {status}{dirty?' · local changes need backup':''}</div>
-    <div className="macts"><button className="btn btn-g" onClick={onClose}>Close</button><button className="btn btn-g" disabled={syncing} onClick={()=>{saveSettings();onPull();}}>↓ Pull latest</button><button className="btn btn-p" disabled={syncing} onClick={()=>{saveSettings();onPush();}}>↑ Save local data</button></div>
+    <div className="macts"><button className="btn btn-g" onClick={onClose}>Close</button><button className="btn btn-g" disabled={syncing} onClick={()=>{const settings=saveSettings();onConfig(settings);onPull(settings);}}>↓ Pull latest</button><button className="btn btn-p" disabled={syncing} onClick={()=>{const settings=saveSettings();onConfig(settings);onPush(settings);}}>↑ Save local data</button></div>
   </div></div>;
 }
 
