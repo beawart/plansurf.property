@@ -182,6 +182,8 @@ const b64encode=s=>{const bytes=new TextEncoder().encode(s);let bin='';bytes.for
 const b64decode=s=>{const bin=atob(s.replace(/\n/g,'')),bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes);};
 const githubError=x=>{if(x.includes('401'))return'Token is invalid or expired.';if(x.includes('403'))return'Token lacks repository access.';if(x.includes('404'))return'Repository or data file was not found.';if(x.includes('409'))return'The file changed elsewhere. Pull the latest copy first.';return x.slice(0,180);};
 const uid=()=>Math.random().toString(36).substr(2,9)+Date.now().toString(36);
+const num=value=>{const parsed=Number(value);return Number.isFinite(parsed)?parsed:0;};
+const sumBy=(rows,key)=>rows.reduce((sum,row)=>sum+num(row[key]),0);
 const fmt=n=>{const abs=Math.abs(n);const s=abs.toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});return(n<0?'-':'')+' $'+s;};
 const fmtShort=n=>'$'+Math.abs(n).toLocaleString('en-AU',{minimumFractionDigits:0,maximumFractionDigits:0});
 
@@ -420,12 +422,12 @@ function App(){
   // ── Calculations ──
 
   // Total income for this FY
-  const totalIncome=propIncomes.reduce((s,i)=>s+i.amount,0);
+  const totalIncome=sumBy(propIncomes,'amount');
 
   // Expenses by category
   const expByCat=useMemo(()=>{
     const m={};
-    propExpenses.forEach(e=>{m[e.category]=(m[e.category]||0)+e.amount;});
+    propExpenses.forEach(e=>{m[e.category]=(m[e.category]||0)+num(e.amount);});
     return m;
   },[propExpenses]);
 
@@ -433,18 +435,18 @@ function App(){
   const totalDeductible=propExpenses.filter(e=>{
     const cat=CAT_MAP[e.category];
     return cat&&cat.deductible;
-  }).reduce((s,e)=>s+e.amount,0);
+  }).reduce((s,e)=>s+num(e.amount),0);
 
   const totalNonDeductible=propExpenses.filter(e=>{
     const cat=CAT_MAP[e.category];
     return !cat||!cat.deductible;
-  }).reduce((s,e)=>s+e.amount,0);
+  }).reduce((s,e)=>s+num(e.amount),0);
 
   // Borrowing expenses deduction for this FY
   const borrowingDeduction=useMemo(()=>{
     if(!prop) return 0;
     const be=propExpenses.filter(e=>e.category==='borrowing');
-    const totalBE=be.reduce((s,e)=>s+e.amount,0);
+    const totalBE=sumBy(be,'amount');
     // If ≤$100, fully deductible in year incurred
     if(totalBE<=100) return totalBE;
     // Otherwise spread over 5 years (or loan term if shorter)
@@ -480,15 +482,15 @@ function App(){
   },[propDeps,fy]);
 
   // Net rental income (before depreciation — standard deductibles minus borrowing already counted)
-  const deductibleExBorrowing=totalDeductible-expByCat['borrowing']||0;
+  const deductibleExBorrowing=totalDeductible-(expByCat['borrowing']||0);
   const netRentalIncome=totalIncome-deductibleExBorrowing-(expByCat['borrowing']?borrowingDeduction:0)-depDeductions.total;
   const isNegativelyGeared=netRentalIncome<0;
 
   // Total expenses (for overview)
-  const totalExpenses=propExpenses.reduce((s,e)=>s+e.amount,0);
+  const totalExpenses=sumBy(propExpenses,'amount');
 
   // Capital improvements total
-  const totalCapital=propCapitals.reduce((s,c)=>s+c.amount,0);
+  const totalCapital=sumBy(propCapitals,'amount');
 
   // Gross yield
   const grossYield=prop&&prop.purchasePrice>0?Math.round(totalIncome/prop.purchasePrice*10000)/100:0;
@@ -500,8 +502,8 @@ function App(){
       totalVal+=(parseFloat(p.currentValue)||parseFloat(p.purchasePrice)||0);
       totalLoan+=(parseFloat(p.loanBalance)||0);
       const fk2=`${p.id}_${fy}`;
-      totalRent+=(incomes[fk2]||[]).reduce((s,i)=>s+i.amount,0);
-      totalExp+=(expenses[fk2]||[]).reduce((s,e)=>s+e.amount,0);
+      totalRent+=sumBy(incomes[fk2]||[],'amount');
+      totalExp+=sumBy(expenses[fk2]||[],'amount');
     });
     return{totalVal,totalLoan,equity:totalVal-totalLoan,totalRent,totalExp,net:totalRent-totalExp};
   },[properties,incomes,expenses,fy]);
@@ -846,7 +848,7 @@ function App(){
                       <div className="tax-block">
                         <h4>Income</h4>
                         {INCOME_CATS.map(c=>{
-                          const amt=propIncomes.filter(i=>i.category===c.id).reduce((s,i)=>s+i.amount,0);
+                          const amt=sumBy(propIncomes.filter(i=>i.category===c.id),'amount');
                           if(amt===0) return null;
                           return <div className="tx-row" key={c.id}><span>{c.icon} {c.label}</span><span className="tv pos">{fmt(amt)}</span></div>;
                         })}
@@ -925,7 +927,7 @@ function CGTCalculator({prop,capitals}){
 
   const purchasePrice=parseFloat(prop?.purchasePrice)||0;
   const purchaseDate=prop?.purchaseDate||'';
-  const totalCapitalImprovements=capitals.reduce((s,c)=>s+c.amount,0);
+  const totalCapitalImprovements=sumBy(capitals,'amount');
 
   const sp=parseFloat(salePrice)||0;
   const sc=parseFloat(sellingCosts)||0;
