@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%230b3435'/%3E%3Cstop offset='1' stop-color='%230e6962'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='17' fill='url(%23g)'/%3E%3Ccircle cx='47' cy='17' r='4' fill='%23d9bd7a'/%3E%3Cpath d='M15 32 32 17l17 15' fill='none' stroke='%23f5f2e9' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M22 29v14c0 2 1 3 3 3h14c2 0 3-1 3-3V29' fill='none' stroke='%23f5f2e9' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M29 46v-9h7v9' fill='none' stroke='%23a8e4d4' stroke-width='3' stroke-linejoin='round'/%3E%3Cpath d='M13 52c5-4 10-4 15 0s10 4 15 0 8-3 11-1' fill='none' stroke='%236bd0b2' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
 <title>Investment Property Manager — ATO Tax Planner</title>
 <style>
 :root{--bg:#f6f5f2;--surface:#fff;--surface-alt:#f0efeb;--border:#e0ddd5;--text:#1a1a18;--text-sec:#6b6960;--text-dim:#9e9b90;--accent:#1d4ed8;--accent-light:#eff6ff;--green:#16a34a;--green-bg:#f0fdf4;--red:#dc2626;--red-bg:#fef2f2;--amber:#d97706;--amber-bg:#fffbeb;--teal:#0d9488;--teal-bg:#f0fdfa;--purple:#7c3aed;--purple-bg:#f5f3ff;--radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,.06);--shadow-lg:0 8px 24px rgba(0,0,0,.08);}
@@ -176,13 +176,11 @@ const {useState,useEffect,useMemo,useCallback,useRef}=React;
 const S='inv-property-v1';
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d;}catch{return d;}};
 const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
-const GITHUB_CONFIG='inv-property-github-v1';
-const SYNC_BUILD='property-sync-2026-09-11-1';
-const DEFAULT_SYNC_CONFIG={owner:'beawart',repo:'plansurf-data',path:'plansurf.property-data.json',branch:'main'};
-const getSyncConfig=()=>{const saved=load(GITHUB_CONFIG,{});return{owner:saved.owner||DEFAULT_SYNC_CONFIG.owner,repo:saved.repo||DEFAULT_SYNC_CONFIG.repo,path:saved.path||DEFAULT_SYNC_CONFIG.path,branch:saved.branch||DEFAULT_SYNC_CONFIG.branch};};
-const b64encode=s=>{const bytes=new TextEncoder().encode(s);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin);};
-const b64decode=s=>{const bin=atob(s.replace(/\n/g,'')),bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes);};
-const githubError=x=>{try{const data=JSON.parse(x);if(data.message)return data.message;}catch{}if(x.includes('401'))return'Token is invalid or expired.';if(x.includes('403'))return'Token lacks repository access.';if(x.includes('404'))return'Repository or property file was not found.';if(x.includes('409'))return'The file changed elsewhere. Pull the latest copy first.';return x.slice(0,180);};
+const SYNC_STORAGE_KEY='inv-property-sync-v1';
+const API_BASE_URL=(window.__PLANSURF_API__||'https://plansurf-service.onrender.com').replace(/\/$/,'');
+const DEFAULT_SYNC_CONFIG={};
+const getSyncConfig=()=>{const saved=load(SYNC_STORAGE_KEY,{});return{...DEFAULT_SYNC_CONFIG,...saved};};
+const serviceError=x=>{try{const data=JSON.parse(x);if(data.error)return data.error; if(data.message)return data.message;}catch{}if(x.includes('401'))return'Password is invalid or expired.';if(x.includes('403'))return'This account is not allowed to access the service.';if(x.includes('404'))return'The PlanSurf service endpoint was not found.';return x.slice(0,180);};
 const uid=()=>Math.random().toString(36).substr(2,9)+Date.now().toString(36);
 const num=value=>{const parsed=Number(value);return Number.isFinite(parsed)?parsed:0;};
 const sumBy=(rows,key)=>rows.reduce((sum,row)=>sum+num(row[key]),0);
@@ -367,7 +365,7 @@ function App(){
   const [modal,setModal]=useState(null);
   const [editItem,setEditItem]=useState(null);
   const [syncConfig,setSyncConfig]=useState(getSyncConfig);
-  const [githubToken,setGithubToken]=useState('');
+  const [sessionToken,setSessionToken]=useState('');
   const [syncStatus,setSyncStatus]=useState('Local cache loaded');
   const [dirty,setDirty]=useState(false);
   const [syncing,setSyncing]=useState(false);
@@ -510,64 +508,89 @@ function App(){
     return{totalVal,totalLoan,equity:totalVal-totalLoan,totalRent,totalExp,net:totalRent-totalExp};
   },[properties,incomes,expenses,fy]);
 
-  const syncData={version:1,properties,incomes,expenses,capitals,depreciations,updatedAt:new Date().toISOString()};
-  const githubContentsUrl=config=>`https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}/contents/${config.path.split('/').map(encodeURIComponent).join('/')}`;
-  const githubUrl=config=>`${githubContentsUrl(config)}?ref=${encodeURIComponent(config.branch)}`;
-  const githubRepoUrl=config=>`https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.repo)}`;
-  const githubHeaders=()=>({'Accept':'application/vnd.github+json','Authorization':`Bearer ${githubToken}`,'X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'});
-  const validSync=config=>config.owner&&config.repo&&config.path&&config.branch&&githubToken;
-  const saveSyncConfig=config=>{setSyncConfig(config);save(GITHUB_CONFIG,config);};
-  const getGitHubFile=async config=>{
-    const url=githubUrl(config);
-    let response=await fetch(url,{headers:githubHeaders(),cache:'no-store'});
-    if(response.status===404) response=await fetch(`${url}&refresh=${Date.now()}`,{headers:githubHeaders(),cache:'no-store'});
-    return response;
+  const syncData={app:'plansurf-property',version:1,properties,incomes,expenses,capitals,depreciations,updatedAt:new Date().toISOString()};
+  const apiRequest=async(path,options={})=>{
+    const response=await fetch(`${API_BASE_URL}${path}`,{
+      ...options,
+      headers:{'Content-Type':'application/json',...(sessionToken?{Authorization:`Bearer ${sessionToken}`}:{}),...(options.headers||{})},
+      cache:'no-store'
+    });
+    const payload=await response.json().catch(()=>({error:'The API returned an invalid response.'}));
+    if(!response.ok)throw new Error(payload.error||payload.message||`API request failed (${response.status}).`);
+    return payload;
   };
-  const explainNotFound=async config=>{
-    const repoResponse=await fetch(githubRepoUrl(config),{headers:githubHeaders(),cache:'no-store'});
-    if(repoResponse.ok)return`Property file not found at ${config.path} on branch ${config.branch}. Check the GitHub filename and branch, then use Save local data.`;
-    if(repoResponse.status===401)return'Token is invalid or expired.';
-    if(repoResponse.status===403)return'Token lacks permission to view this repository.';
-    return`Repository ${config.owner}/${config.repo} is not visible to this token. Check the owner, repository name, and token repository access.`;
+  const loginApi=async password=>{
+    setSyncing(true);setSyncStatus('Signing in...');
+    const endpoints=['/api/property/login','/api/budget/login'];
+    try{
+      let lastError;
+      for(const endpoint of endpoints){
+        try{
+          const payload=await apiRequest(endpoint,{method:'POST',body:JSON.stringify({password})});
+          if(payload.token){
+            setSessionToken(payload.token);
+            setSyncStatus('Signed in');
+            return true;
+          }
+          lastError=new Error('Sign-in response did not include a token.');
+        }catch(error){lastError=error;}
+      }
+      throw lastError||new Error('Unable to sign in to the PlanSurf service.');
+    }catch(error){
+      setSessionToken('');
+      setSyncStatus('Sign in failed: '+serviceError(error.message));
+      return false;
+    }finally{setSyncing(false);}
+  };
+  const logoutApi=async()=>{
+    try{if(sessionToken){
+      for(const endpoint of ['/api/property/logout','/api/budget/logout']){
+        try{await apiRequest(endpoint,{method:'POST'});break;}catch{}
+      }
+    }}catch{}
+    setSessionToken('');
+    setSyncStatus('Signed out');
   };
   const applySyncData=d=>{
-    if(!Array.isArray(d.properties)||typeof d.incomes!=='object'||typeof d.expenses!=='object'||typeof d.capitals!=='object'||typeof d.depreciations!=='object')throw new Error('The JSON file has an unexpected format.');
+    if(!Array.isArray(d.properties)||typeof d.incomes!=='object'||typeof d.expenses!=='object'||typeof d.capitals!=='object'||typeof d.depreciations!=='object')throw new Error('The data from the service has an unexpected format.');
     suppressDirty.current=true;
     setProperties(d.properties);setIncomes(d.incomes);setExpenses(d.expenses);setCapitals(d.capitals);setDepreciations(d.depreciations);
   };
-  const pullGitHub=async(config=syncConfig)=>{
-    if(!validSync(config)){setSyncStatus('Complete GitHub settings first');return;}
+  const pullService=async()=>{
+    if(!sessionToken){setSyncStatus('Sign in before syncing property data');return;}
     if(dirty&&!window.confirm('Pulling will replace unsaved local changes. Continue?'))return;
-    setSyncing(true);setSyncStatus('Pulling property data from GitHub...');
+    setSyncing(true);setSyncStatus('Loading property data...');
     try{
-      const response=await getGitHubFile(config);
-      if(response.status===404){setSyncStatus(`Pull failed: file read returned 404; ${await explainNotFound(config)} · ${SYNC_BUILD}`);return;}
-      if(!response.ok)throw new Error(`${response.status} ${await response.text()}`);
-      const remote=JSON.parse(b64decode((await response.json()).content));
-      applySyncData(remote);setDirty(false);setSyncStatus('Property data synced from GitHub');
-    }catch(error){setSyncStatus('Pull failed: '+githubError(error.message));}
+      let lastError;
+      for(const endpoint of ['/api/property/data','/api/budget/data']){
+        try{
+          const data=await apiRequest(endpoint);
+          if(data && data.properties){
+            applySyncData(data);
+            setDirty(false);
+            setSyncStatus('Property data synced');
+            return;
+          }
+        }catch(error){lastError=error;}
+      }
+      throw lastError||new Error('No property data was returned from the service.');
+    }catch(error){setSyncStatus('Pull failed: '+serviceError(error.message));}
     finally{setSyncing(false);}
   };
-  const pushGitHub=async(config=syncConfig)=>{
-    if(!validSync(config)){setSyncStatus('Complete GitHub settings first');return;}
-    setSyncing(true);setSyncStatus('Saving property data to GitHub...');
+  const pushService=async()=>{
+    if(!sessionToken){setSyncStatus('Sign in before syncing property data');return;}
+    setSyncing(true);setSyncStatus('Saving property data...');
     try{
-      const url=githubContentsUrl(config);let sha=null;const existing=await getGitHubFile(config);
-      if(existing.ok)sha=(await existing.json()).sha;else if(existing.status!==404)throw new Error(`${existing.status} ${await existing.text()}`);
-      if(!sha){
-        const repoResponse=await fetch(githubRepoUrl(config),{headers:githubHeaders(),cache:'no-store'});
-        if(!repoResponse.ok)throw new Error(`${repoResponse.status} ${await repoResponse.text()}`);
+      let lastError;
+      for(const endpoint of ['/api/property/data','/api/budget/data']){
+        try{
+          await apiRequest(endpoint,{method:'PUT',body:JSON.stringify(syncData)});
+          setDirty(false);setSyncStatus('Property data saved');
+          return;
+        }catch(error){lastError=error;}
       }
-      const body={message:'Update PlanSurf property data',content:b64encode(JSON.stringify(syncData,null,2)),branch:config.branch};
-      if(sha)body.sha=sha;
-      let response=await fetch(url,{method:'PUT',headers:githubHeaders(),body:JSON.stringify(body)});
-      if(response.status===422&&!sha){
-        const retry=await getGitHubFile(config);
-        if(retry.ok){body.sha=(await retry.json()).sha;response=await fetch(url,{method:'PUT',headers:githubHeaders(),body:JSON.stringify(body)});}
-      }
-      if(!response.ok)throw new Error(`${response.status} ${await response.text()}`);
-      setDirty(false);setSyncStatus('Property data backed up to private GitHub repo');
-    }catch(error){setSyncStatus('Backup failed: '+githubError(error.message));}
+      throw lastError||new Error('Unable to save property data to the service.');
+    }catch(error){setSyncStatus('Backup failed: '+serviceError(error.message));}
     finally{setSyncing(false);}
   };
 
@@ -650,7 +673,7 @@ function App(){
           <div className="io">
             <button onClick={exportAll}>↓ Export</button>
             <button onClick={importAll}>↑ Import</button>
-            <button onClick={pushGitHub} disabled={syncing}>☁ Backup</button>
+            <button onClick={()=>setModal('sync')} disabled={syncing}>☁ Sync</button>
           </div>
         </div>
 
@@ -936,9 +959,9 @@ function App(){
       {modal==='property'&&<PropertyModal prop={editItem} onClose={()=>{setModal(null);setEditItem(null);}}
         onSave={p=>{if(editItem) updateProperty(editItem.id,p); else addProperty(p); setModal(null);setEditItem(null);}}
         onDelete={editItem?()=>{deleteProperty(editItem.id);setModal(null);setEditItem(null);}:null} />}
-      {modal==='sync'&&<SyncModal config={syncConfig} token={githubToken} dirty={dirty} syncing={syncing}
-        onClose={()=>setModal(null)} onConfig={config=>saveSyncConfig(config)} onToken={setGithubToken}
-        onPull={pullGitHub} onPush={pushGitHub} status={syncStatus} />}
+      {modal==='sync'&&<SyncModal sessionToken={sessionToken} dirty={dirty} syncing={syncing}
+        onClose={()=>setModal(null)} onLogin={loginApi} onLogout={logoutApi}
+        onPull={pullService} onPush={pushService} status={syncStatus} />}
     </div>
   );
 }
@@ -1173,20 +1196,21 @@ function PropertyModal({prop,onClose,onSave,onDelete}){
   );
 }
 
-function SyncModal({config,token,dirty,syncing,onClose,onConfig,onToken,onPull,onPush,status}){
-  const [owner,setOwner]=useState(config.owner||DEFAULT_SYNC_CONFIG.owner);
-  const [repo,setRepo]=useState(config.repo||DEFAULT_SYNC_CONFIG.repo);
-  const [path,setPath]=useState(config.path||DEFAULT_SYNC_CONFIG.path);
-  const [branch,setBranch]=useState(config.branch||DEFAULT_SYNC_CONFIG.branch);
-  const saveSettings=()=>({owner:owner.trim()||DEFAULT_SYNC_CONFIG.owner,repo:repo.trim()||DEFAULT_SYNC_CONFIG.repo,path:path.trim()||DEFAULT_SYNC_CONFIG.path,branch:branch.trim()||DEFAULT_SYNC_CONFIG.branch});
+function SyncModal({sessionToken,dirty,syncing,onClose,onLogin,onLogout,onPull,onPush,status}){
+  const [password,setPassword]=useState('');
   return <div className="modal-ov" onClick={onClose}><div className="modal" onClick={e=>e.stopPropagation()}>
-    <h3>☁ Private GitHub Backup</h3>
-    <div className="sync-note">Your existing local property data stays in this browser. Use <strong>Save local data</strong> to create or update the property JSON file in your private repository. The token is used only for this session and is never stored.</div>
-    <div className="fg-row"><div className="fg"><label>GitHub owner / username</label><input value={owner} onChange={e=>setOwner(e.target.value)} placeholder="beawart" /></div><div className="fg"><label>Private repository</label><input value={repo} onChange={e=>setRepo(e.target.value)} placeholder="plansurf-data" /></div></div>
-    <div className="fg-row"><div className="fg"><label>Property data file path</label><input value={path} onChange={e=>setPath(e.target.value)} placeholder="plansurf.property-data.json" /></div><div className="fg"><label>Branch</label><input value={branch} onChange={e=>setBranch(e.target.value)} placeholder="main" /></div></div>
-    <div className="fg"><label>Fine-grained personal access token</label><input type="password" value={token} onChange={e=>onToken(e.target.value)} placeholder="github_pat_..." /><div className="hint">Grant Contents: Read and write for this private repository only.</div></div>
+    <h3>☁ PlanSurf Service Sync</h3>
+    <div className="sync-note">Sign in with the app password configured on the PlanSurf service. This keeps the property dashboard synced to the same backend as the budget planner.</div>
+    {!sessionToken&&<div className="fg"><label>Password</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" onKeyDown={async e=>{if(e.key==='Enter'&&!syncing&&await onLogin(password))setPassword('');}} /><div className="hint">Use the same password as the PlanSurf budget service.</div></div>}
     <div className="sync-note">Status: {status}{dirty?' · local changes need backup':''}</div>
-    <div className="macts"><button className="btn btn-g" onClick={onClose}>Close</button><button className="btn btn-g" disabled={syncing} onClick={()=>{const settings=saveSettings();onConfig(settings);onPull(settings);}}>↓ Pull latest</button><button className="btn btn-p" disabled={syncing} onClick={()=>{const settings=saveSettings();onConfig(settings);onPush(settings);}}>↑ Save local data</button></div>
+    <div className="macts">
+      <button className="btn btn-g" onClick={onClose}>Close</button>
+      {sessionToken ? <>
+        <button className="btn btn-g" disabled={syncing} onClick={onPull}>↓ Pull latest</button>
+        <button className="btn btn-p" disabled={syncing} onClick={onPush}>↑ Save local data</button>
+        <button className="btn btn-g" disabled={syncing} onClick={onLogout}>Sign out</button>
+      </> : <button className="btn btn-p" disabled={syncing||!password.trim()} onClick={async()=>{if(await onLogin(password))setPassword('');}}>{syncing?'Signing in...':'Sign in'}</button>}
+    </div>
   </div></div>;
 }
 
